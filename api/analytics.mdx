@@ -1,0 +1,563 @@
+---
+title: 'Analytics API'
+description: 'Access analytics and statistics for your shortened links'
+---
+
+## Overview
+
+The Analytics API provides access to link performance data, including view counts, geographic information, and user agent details. All analytics are collected automatically when users click shortened links.
+
+## Collections
+
+sptfy.in uses these PocketBase collections for analytics:
+
+<CardGroup cols={2}>
+  <Card title="analytics" icon="chart-line">
+    Detailed click-level data (user agent, country, timestamp)
+  </Card>
+  
+  <Card title="viewList" icon="eye">
+    Aggregated link data with view counts (utm_view field)
+  </Card>
+</CardGroup>
+
+## Analytics Record Structure
+
+Each click on a shortened link creates a record in the `analytics` collection (unless from a bot).
+
+### Analytics Fields
+
+<ResponseField name="id" type="string">
+  PocketBase record ID
+</ResponseField>
+
+<ResponseField name="author" type="string">
+  Link record ID (reference to random_short collection)
+</ResponseField>
+
+<ResponseField name="url_id" type="string">
+  Link record ID (duplicate of author field)
+</ResponseField>
+
+<ResponseField name="utm_userAgent" type="string">
+  Full user agent string of the visitor
+  
+  **Example:**
+  ```
+  Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+  ```
+</ResponseField>
+
+<ResponseField name="utm_country" type="string">
+  Two-letter country code from Cloudflare (CF-IPCountry header)
+  
+  **Example:** `US`, `GB`, `DE`, `JP`
+</ResponseField>
+
+<ResponseField name="rawData" type="string">
+  Copy of utm_country (for backwards compatibility)
+</ResponseField>
+
+<ResponseField name="created" type="string">
+  ISO 8601 timestamp when the click occurred
+  
+  **Example:** `2024-01-15T10:30:00.000Z`
+</ResponseField>
+
+## Accessing Analytics Data
+
+Analytics are accessed through PocketBase's standard API endpoints. You need authentication to access analytics for your own links.
+
+### Get Analytics for a Link
+
+Fetch all analytics records for a specific link.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://pb.sptfy.in/api/collections/analytics/records?filter=url_id='RECORD_ID'&sort=-created" \
+  -H "Authorization: Bearer YOUR_AUTH_TOKEN"
+```
+
+```javascript JavaScript
+const pb = new PocketBase('https://pb.sptfy.in');
+
+// Authenticate first
+await pb.collection('users').authWithOAuth2({ provider: 'github' });
+
+// Fetch analytics for a specific link
+const records = await pb.collection('analytics').getFullList({
+  filter: pb.filter('url_id = {:linkId}', { linkId: 'your_link_id' }),
+  sort: '-created'
+});
+
+console.log(`Total clicks: ${records.length}`);
+```
+
+```python Python
+from pocketbase import PocketBase
+
+pb = PocketBase('https://pb.sptfy.in')
+
+# Authenticate
+pb.collection('users').auth_with_oauth2(provider='github')
+
+# Get analytics
+records = pb.collection('analytics').get_full_list(
+    filter=f"url_id='{link_id}'",
+    sort='-created'
+)
+
+print(f'Total clicks: {len(records)}')
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="filter" type="string">
+  PocketBase filter expression (e.g., `url_id='abc123'`)
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort order (prefix with `-` for descending, e.g., `-created`)
+</ParamField>
+
+<ParamField query="perPage" type="number" default="30">
+  Number of records per page
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+### Response
+
+```json
+{
+  "page": 1,
+  "perPage": 30,
+  "totalPages": 2,
+  "totalItems": 42,
+  "items": [
+    {
+      "id": "analytics_record_id",
+      "author": "link_record_id",
+      "url_id": "link_record_id",
+      "utm_userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)...",
+      "utm_country": "US",
+      "rawData": "US",
+      "created": "2024-01-15T10:30:00.000Z",
+      "updated": "2024-01-15T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+## View Count
+
+Each link in the `viewList` collection has a `utm_view` field that tracks total clicks.
+
+### Get Link with View Count
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://pb.sptfy.in/api/collections/viewList/records?filter=id_url='abc123'" \
+  -H "Authorization: Bearer YOUR_AUTH_TOKEN"
+```
+
+```javascript JavaScript
+const records = await pb.collection('viewList').getList(1, 1, {
+  filter: pb.filter('id_url = {:slug}', { slug: 'abc123' })
+});
+
+const link = records.items[0];
+console.log(`Views: ${link.utm_view}`);
+```
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "link_record_id",
+      "id_url": "abc123",
+      "from": "https://open.spotify.com/track/...",
+      "utm_view": 42,
+      "subdomain": "sptfy.in",
+      "created": "2024-01-10T08:00:00.000Z"
+    }
+  ]
+}
+```
+
+## Recent Links
+
+Fetch recently created links across the platform.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://pb.sptfy.in/api/collections/viewList/records?sort=-created&perPage=10&page=1"
+```
+
+```javascript JavaScript
+// Using the helper function from pocketbase.js
+import { getRecentRecords } from '$lib/pocketbase';
+
+const data = await getRecentRecords('viewList', 10, 1);
+console.log(data.items);
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="sort" type="string" default="-created">
+  Sort by creation date (descending)
+</ParamField>
+
+<ParamField query="fields" type="string" default="id_url,from,created,subdomain">
+  Comma-separated list of fields to return
+</ParamField>
+
+<ParamField query="perPage" type="number" default="10">
+  Number of items per page
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+## Top Links
+
+Fetch links sorted by view count (most popular first).
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://pb.sptfy.in/api/collections/viewList/records?sort=-utm_view&filter=(utm_view>0)&perPage=10&page=1"
+```
+
+```javascript JavaScript
+// Using the helper function from pocketbase.js
+import { getTopLinks } from '$lib/pocketbase';
+
+const data = await getTopLinks(10, 1);
+console.log(data.items);
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="sort" type="string" default="-utm_view">
+  Sort by view count (descending)
+</ParamField>
+
+<ParamField query="filter" type="string" default="(utm_view>0)">
+  Only include links with at least 1 view
+</ParamField>
+
+<ParamField query="fields" type="string">
+  Fields to return: id_url, from, created, subdomain, utm_view
+</ParamField>
+
+<ParamField query="perPage" type="number" default="10">
+  Number of items per page
+</ParamField>
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id_url": "popular",
+      "from": "https://open.spotify.com/track/...",
+      "created": "2024-01-01T00:00:00.000Z",
+      "subdomain": "sptfy.in",
+      "utm_view": 1337
+    },
+    {
+      "id_url": "viral",
+      "from": "https://open.spotify.com/playlist/...",
+      "created": "2024-01-05T12:00:00.000Z",
+      "subdomain": "sptfy.in",
+      "utm_view": 892
+    }
+  ]
+}
+```
+
+## Analytics Aggregation
+
+Analyze clicks by country, user agent, or time period.
+
+### Group by Country
+
+<CodeGroup>
+```javascript JavaScript
+const records = await pb.collection('analytics').getFullList({
+  filter: pb.filter('url_id = {:linkId}', { linkId: 'your_link_id' })
+});
+
+// Count by country
+const byCountry = records.reduce((acc, record) => {
+  const country = record.utm_country || 'Unknown';
+  acc[country] = (acc[country] || 0) + 1;
+  return acc;
+}, {});
+
+console.log(byCountry);
+// { "US": 42, "GB": 18, "DE": 12, ... }
+```
+
+```python Python
+from collections import Counter
+
+records = pb.collection('analytics').get_full_list(
+    filter=f"url_id='{link_id}'"
+)
+
+# Count by country
+countries = [r.utm_country or 'Unknown' for r in records]
+country_counts = Counter(countries)
+
+print(country_counts)
+# Counter({'US': 42, 'GB': 18, 'DE': 12, ...})
+```
+</CodeGroup>
+
+### Time-based Analysis
+
+<CodeGroup>
+```javascript JavaScript
+// Get clicks in the last 24 hours
+const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+const recentClicks = await pb.collection('analytics').getFullList({
+  filter: pb.filter('url_id = {:linkId} && created >= {:date}', {
+    linkId: 'your_link_id',
+    date: oneDayAgo
+  }),
+  sort: '-created'
+});
+
+console.log(`Clicks in last 24h: ${recentClicks.length}`);
+```
+
+```python Python
+from datetime import datetime, timedelta
+
+one_day_ago = (datetime.now() - timedelta(days=1)).isoformat()
+
+recent = pb.collection('analytics').get_full_list(
+    filter=f"url_id='{link_id}' && created>='{one_day_ago}'",
+    sort='-created'
+)
+
+print(f'Clicks in last 24h: {len(recent)}')
+```
+</CodeGroup>
+
+### User Agent Parsing
+
+<CodeGroup>
+```javascript JavaScript
+// Simple mobile detection
+const records = await pb.collection('analytics').getFullList({
+  filter: pb.filter('url_id = {:linkId}', { linkId: 'your_link_id' })
+});
+
+const mobile = records.filter(r => 
+  /Mobile|Android|iPhone|iPad/i.test(r.utm_userAgent)
+).length;
+
+const desktop = records.length - mobile;
+
+console.log(`Mobile: ${mobile}, Desktop: ${desktop}`);
+```
+</CodeGroup>
+
+## Bot Detection
+
+Clicks from bots and crawlers are **not** recorded in analytics. The following patterns are detected:
+
+<AccordionGroup>
+  <Accordion title="Social Media Bots">
+    - WhatsApp (link preview)
+    - Telegram (link preview)
+    - Twitter/X (card preview)
+    - Facebook (external hit)
+  </Accordion>
+  
+  <Accordion title="Search Engine Crawlers">
+    - Googlebot
+    - Google Safety
+    - Google Firebase
+    - Bing (slurp)
+    - Generic bot/crawler/spider patterns
+  </Accordion>
+  
+  <Accordion title="Developer Tools">
+    - axios
+    - okhttp
+    - node-fetch
+    - python-requests
+    - curl (if "curl/" in user agent)
+  </Accordion>
+  
+  <Accordion title="Other">
+    - dub.co (link checker)
+    - Unknown user agents
+    - iframe embeds
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+Bot detection logic is in `/home/daytona/workspace/source/src/routes/[slug]/+page.server.js:7-34`
+</Note>
+
+## Real-time Analytics
+
+PocketBase supports real-time subscriptions to collections. You can subscribe to analytics updates for live dashboards.
+
+<CodeGroup>
+```javascript JavaScript
+import { getPocketBase } from '$lib/pocketbase';
+
+const pb = getPocketBase();
+
+// Subscribe to new analytics records for a specific link
+pb.collection('analytics').subscribe('*', function (e) {
+  if (e.record.url_id === 'your_link_id') {
+    console.log('New click:', e.record);
+    // Update your UI with new data
+  }
+});
+
+// Unsubscribe when done
+pb.collection('analytics').unsubscribe();
+```
+</CodeGroup>
+
+### Subscription Events
+
+<ResponseField name="action" type="string">
+  Event type: `create`, `update`, or `delete`
+</ResponseField>
+
+<ResponseField name="record" type="object">
+  The analytics record that was created/updated/deleted
+</ResponseField>
+
+## Rate Limits
+
+PocketBase doesn't enforce strict rate limits by default, but you should:
+
+<Warning>
+- Avoid polling analytics more than once per minute
+- Use real-time subscriptions instead of repeated queries
+- Cache aggregated results on your end
+- Respect server resources (shared PocketBase instance)
+</Warning>
+
+## Privacy Considerations
+
+<Info>
+sptfy.in collects minimal analytics data:
+- **Stored:** User agent, country code, timestamp
+- **NOT stored:** IP addresses, cookies, personal identifiers
+- **Bot filtering:** Automated requests are excluded from analytics
+</Info>
+
+All analytics data is tied to link records. When a link is deleted, associated analytics records should also be removed (via PocketBase cascade delete rules).
+
+## Example: Complete Analytics Dashboard
+
+Here's a complete example fetching and analyzing all available metrics:
+
+```javascript
+import PocketBase from 'pocketbase';
+
+const pb = new PocketBase('https://pb.sptfy.in');
+await pb.collection('users').authWithOAuth2({ provider: 'github' });
+
+async function getLinkAnalytics(linkId) {
+  // Get link info with view count
+  const link = await pb.collection('random_short').getOne(linkId);
+  
+  // Get all analytics records
+  const analytics = await pb.collection('analytics').getFullList({
+    filter: pb.filter('url_id = {:linkId}', { linkId }),
+    sort: '-created'
+  });
+  
+  // Calculate metrics
+  const totalViews = link.utm_view;
+  const uniqueCountries = new Set(analytics.map(a => a.utm_country)).size;
+  
+  const byCountry = analytics.reduce((acc, a) => {
+    const country = a.utm_country || 'Unknown';
+    acc[country] = (acc[country] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const mobile = analytics.filter(a => 
+    /Mobile|Android|iPhone|iPad/i.test(a.utm_userAgent)
+  ).length;
+  
+  const last24h = analytics.filter(a => {
+    const clickTime = new Date(a.created).getTime();
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    return clickTime >= oneDayAgo;
+  }).length;
+  
+  return {
+    link: {
+      slug: link.id_url,
+      destination: link.from,
+      created: link.created
+    },
+    metrics: {
+      totalViews,
+      uniqueCountries,
+      mobileClicks: mobile,
+      desktopClicks: analytics.length - mobile,
+      clicksLast24h: last24h,
+      topCountries: Object.entries(byCountry)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+    },
+    recentClicks: analytics.slice(0, 10)
+  };
+}
+
+const stats = await getLinkAnalytics('your_link_id');
+console.log(stats);
+```
+
+**Output:**
+```json
+{
+  "link": {
+    "slug": "mytrack",
+    "destination": "https://open.spotify.com/track/...",
+    "created": "2024-01-10T08:00:00.000Z"
+  },
+  "metrics": {
+    "totalViews": 42,
+    "uniqueCountries": 8,
+    "mobileClicks": 28,
+    "desktopClicks": 14,
+    "clicksLast24h": 5,
+    "topCountries": [
+      ["US", 18],
+      ["GB", 9],
+      ["DE", 6],
+      ["FR", 4],
+      ["JP", 3]
+    ]
+  },
+  "recentClicks": [
+    { "created": "2024-01-15T10:30:00.000Z", "utm_country": "US", ... }
+  ]
+}
+```

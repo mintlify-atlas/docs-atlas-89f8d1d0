@@ -1,0 +1,358 @@
+---
+title: Managing Your Links
+description: View, organize, edit, and delete your shortened links in the sptfy.in dashboard
+---
+
+## Dashboard Overview
+
+The **Dashboard** is your central hub for managing all your shortened links. Access it at [sptfy.in/dash/links](https://sptfy.in/dash/links) after signing in with Spotify.
+
+<Note>
+**Authentication required:** You must sign in with your Spotify account to access the dashboard and manage your links.
+</Note>
+
+### Dashboard Features
+
+- **Link list** - View all your created links with rich previews
+- **Search & filter** - Find specific links quickly
+- **Edit mode** - Modify destination URLs, slugs, and subdomains
+- **Bulk actions** - Delete multiple links at once
+- **View modes** - Switch between card and list layouts
+- **Analytics preview** - See click counts for each link
+
+## Viewing Your Links
+
+### Card View (Default)
+
+The card view displays links as individual cards with:
+
+**Preview card contents:**
+- **Spotify content preview** - Album art, track title, artist name
+- **Content type badge** - Track, album, artist, playlist, etc.
+- **Short URL** - Your sptfy.in shortened link
+- **Statistics** - Creation date and total views
+- **Quick actions** - Copy, open, edit buttons
+- **Accent color** - Dynamic color bar based on album art
+
+**Grid layout:**
+- **Desktop:** 3 columns
+- **Mobile:** 1 column, full width
+
+### List View (Compact)
+
+Switch to list view for a more compact, table-like layout:
+
+**List row contents:**
+- **Thumbnail** - Small album art preview (48px)
+- **Title & type** - Content name and type badge
+- **Short URL** - Compact display with copy button
+- **Stats** - Views and creation date (desktop only)
+- **Quick actions** - Edit and open buttons
+
+**Switching views:**
+Click the **view toggle button** in the header (grid/list icon) to switch layouts. Your preference is saved automatically.
+
+## Link Previews
+
+Each link displays a rich preview of the Spotify content:
+
+### Preview Loading
+
+**Loading states:**
+1. **Initial load** - Skeleton animation (gray pulsing boxes)
+2. **Fetching** - API call to Microlink to get Spotify metadata
+3. **Cached** - Instant display from localStorage (24-hour cache)
+4. **Loaded** - Full preview with artwork, title, and artist
+
+<Tip>
+**Performance optimization:** Previews are cached in your browser for 24 hours. Refresh the page to force re-fetch if content has changed.
+</Tip>
+
+### Preview Data
+
+Previews show:
+- **Image** - Album/artist/playlist artwork
+- **Title** - Track name, artist name, or playlist title
+- **Subtitle** - Artist, album, or description
+- **Type** - Content category (track, album, artist, playlist, podcast, etc.)
+- **Accent color** - Extracted from artwork for visual flair
+
+**Fallback:**
+If preview fails to load, a music note icon (🎵) is shown instead.
+
+## Creating New Links
+
+Create links directly from the dashboard:
+
+<Steps>
+  <Step title="Click '+ Create New Link'">
+    Click the **+** button in the dashboard header to open the creation dialog.
+  </Step>
+
+  <Step title="Paste Spotify URL">
+    Enter or paste your Spotify URL. The system will:
+    - Auto-extract URLs from text
+    - Expand `spotify.link` short URLs
+    - Fetch a preview of the content
+  </Step>
+
+  <Step title="Customize (optional)">
+    - **Custom slug** - Enter a custom slug (see [Custom Slugs guide](/guides/custom-slugs))
+    - **Subdomain** - Choose from sptfy.in, artist, playlist, track, or profile subdomains
+  </Step>
+
+  <Step title="Complete verification">
+    Complete the Cloudflare Turnstile verification (usually automatic).
+  </Step>
+
+  <Step title="Create link">
+    Click **Create Link**. Your new link appears at the top of the list instantly.
+  </Step>
+</Steps>
+
+<Note>
+**Maintenance mode:** The create button is disabled during maintenance windows. Check [status.sptfy.in](https://status.sptfy.in) for updates.
+</Note>
+
+## Editing Links
+
+Modify existing links without breaking the URL:
+
+### Enabling Edit Mode
+
+**Desktop:**
+Toggle the **Edit** switch in the dashboard header.
+
+**What changes in edit mode:**
+- ✅ Checkboxes appear on each link card/row
+- ✅ Edit buttons become visible
+- ✅ Bulk delete option appears
+- ❌ Cannot create new links while in edit mode
+
+### Editing a Single Link
+
+<Steps>
+  <Step title="Enable edit mode">
+    Turn on the **Edit** toggle switch in the dashboard header.
+  </Step>
+
+  <Step title="Click edit button">
+    Click the **edit icon** (pencil) on the link you want to modify.
+  </Step>
+
+  <Step title="Modify fields">
+    In the edit dialog/drawer, you can change:
+    
+    - **Destination URL** - Update the target Spotify link
+    - **Slug** - Change the short URL identifier (subject to availability)
+    - **Subdomain** - Switch between sptfy.in, artist, playlist, etc.
+    
+    <Warning>
+    Changing the slug will break existing shares of the old URL. The old link will return 404.
+    </Warning>
+  </Step>
+
+  <Step title="Save changes">
+    Click **Save Changes** to update the link. The system will:
+    - Validate the new slug (if changed)
+    - Check availability (if slug changed)
+    - Re-fetch preview (if URL changed)
+    - Update analytics (new slug starts fresh)
+  </Step>
+</Steps>
+
+### Edit Dialog Features
+
+**Desktop:** Opens as a centered dialog
+**Mobile:** Opens as a bottom drawer
+
+**Dialog contents:**
+- Destination URL input with paste button
+- Live URL preview (fetched from Microlink)
+- Slug input with real-time validation
+- Subdomain dropdown selector
+- Delete button (red, bottom-left)
+- Save/Cancel buttons (bottom-right)
+
+<Tip>
+**URL expansion:** If you paste a `spotify.link` URL while editing, the system automatically expands it to the full `open.spotify.com` URL.
+</Tip>
+
+## Deleting Links
+
+### Deleting a Single Link
+
+**Method 1: Edit mode**
+1. Enable **Edit** mode
+2. Click the **edit icon** on the link
+3. Click the **Delete** button (red, bottom-left)
+4. Confirm deletion in the dialog
+
+**Method 2: Quick delete (future)**
+Currently, deletion is only available through edit mode.
+
+### Bulk Deletion
+
+Delete multiple links at once (up to 5 at a time on free tier):
+
+<Steps>
+  <Step title="Enable edit mode">
+    Turn on the **Edit** toggle switch.
+  </Step>
+
+  <Step title="Select links">
+    Check the boxes next to links you want to delete.
+    
+    **Selection helpers:**
+    - **Select All** - Checkbox in the header to select all visible links
+    - **Selected count** - Shows `(X)` next to the delete button
+  </Step>
+
+  <Step title="Click 'Delete (X)'">
+    Click the red **Delete** button in the header. 
+    
+    <Warning>
+    **Free tier limit:** You can delete a maximum of 5 links at once. If you select more, you'll see an error.
+    </Warning>
+  </Step>
+
+  <Step title="Confirm deletion">
+    Confirm in the warning dialog. The action **cannot be undone**.
+  </Step>
+</Steps>
+
+**Bulk delete results:**
+After deletion, you'll see a toast showing:
+- ✅ `Deleted X links` (success count)
+- ❌ `Failed to delete X links` (error count, if any)
+
+## Refreshing the Link List
+
+Manually refresh your links to see the latest data:
+
+**Refresh button:**
+Click the **refresh icon** (circular arrow) in the dashboard header.
+
+**What happens:**
+1. Fetches latest links from the database
+2. Updates view counts
+3. Clears preview cache
+4. Re-fetches previews for all visible links
+
+<Note>
+Refreshing clears the local preview cache and fetches fresh data. Use this if you notice stale previews or missing links.
+</Note>
+
+## Loading More Links
+
+The dashboard loads **50 links per page** by default.
+
+**Load more:**
+- Scroll to the bottom of the link list
+- Click **Load more (X remaining)** button
+- System fetches the next 50 links
+- New links are appended to the list
+
+**Pagination:**
+- **Current page** - Tracked in the URL (e.g., `?page=2`)
+- **Total pages** - Calculated based on your total link count
+- **Per page** - 50 links (fixed)
+
+## User Profile Section
+
+The dashboard header displays your Spotify profile:
+
+**Profile info:**
+- **Avatar** - Fetched from Spotify via Microlink API
+- **Username** - Your Spotify username (`@username`)
+- **Fallback avatar** - Dicebear generated avatar if Spotify image fails
+
+**Avatar loading:**
+- Shows skeleton animation while fetching
+- Displays initials if avatar fails to load
+
+## View Statistics
+
+Each link card/row shows basic analytics:
+
+- **Total views** - Click count (eye icon)
+- **Creation date** - When the link was created (calendar icon)
+
+**See full analytics:**
+Click the **Show Clicks** button on a link (from the homepage) or navigate to `/[slug]/s` to see detailed analytics.
+
+For more info, see the [Analytics guide](/guides/analytics).
+
+## Keyboard & Accessibility
+
+**Keyboard shortcuts:**
+- `Tab` - Navigate through links and buttons
+- `Enter`/`Space` - Activate buttons and toggles
+- `Escape` - Close dialogs/drawers
+
+**Accessibility features:**
+- All interactive elements are keyboard accessible
+- ARIA labels for screen readers
+- Focus indicators on all buttons
+- Responsive design for mobile and desktop
+
+## Troubleshooting
+
+### Links not showing
+
+**Possible causes:**
+- Not signed in → [Sign in with Spotify](https://sptfy.in/login)
+- No links created yet → Create your first link
+- Network issue → Check your connection and refresh
+
+### Previews not loading
+
+**Fixes:**
+- Wait a few seconds for the API to respond
+- Click the **refresh button** to re-fetch
+- Clear browser cache and reload the page
+- Check if the Spotify URL is still valid (deleted content won't preview)
+
+### "Failed to update link"
+
+**Common errors:**
+- **Slug already taken** → Choose a different slug
+- **Reserved slug** → Avoid system routes like `recent`, `about`, etc.
+- **Invalid URL** → Ensure the Spotify URL is valid
+- **Not authorized** → You can only edit your own links
+
+### Bulk delete failed
+
+**Possible reasons:**
+- Selected more than 5 links (free tier limit)
+- One or more links were already deleted
+- Network timeout → Try again with fewer links
+
+## Best Practices
+
+### Organization Tips
+
+- **Use descriptive slugs** - Name links clearly for easy searching later
+- **Choose appropriate subdomains** - Use `artist.sptfy.in` for artists, `playlist.sptfy.in` for playlists, etc.
+- **Regular cleanup** - Delete old or unused links periodically
+- **Bulk operations** - Use bulk delete for removing multiple outdated links
+
+### Performance Tips
+
+- **Use list view** - For faster scrolling with many links
+- **Load in batches** - Don't load all links at once if you have hundreds
+- **Clear cache** - Refresh weekly to ensure previews are up-to-date
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Analytics" icon="chart-line" href="/guides/analytics">
+    Track clicks and understand your audience
+  </Card>
+  <Card title="Custom Slugs" icon="pen" href="/guides/custom-slugs">
+    Create memorable, branded short links
+  </Card>
+  <Card title="Creating Links" icon="scissors" href="/guides/creating-links">
+    Learn the basics of link creation
+  </Card>
+</CardGroup>

@@ -1,0 +1,238 @@
+---
+title: 'Installation'
+description: 'System requirements and initial setup for self-hosting sptfy.in'
+---
+
+## Overview
+
+Sptfy.in uses a split-stack architecture:
+- **Frontend**: SvelteKit app deployed on Cloudflare Pages
+- **Backend**: PocketBase running in Docker on a VPS
+
+This guide covers the requirements and initial setup for both components.
+
+## System Requirements
+
+### VPS (Backend)
+
+<Note>
+The production instance runs on a **2 vCPU / 2 GB RAM / 20 GB disk** VPS. This is sufficient for moderate traffic.
+</Note>
+
+**Minimum requirements:**
+- 1 vCPU
+- 1 GB RAM
+- 10 GB disk space
+- Ubuntu 20.04+ or Debian 11+ (other Linux distros work too)
+- Public IPv4 address
+- Root or sudo access
+
+**Required software:**
+- Docker Engine 20.10+
+- Docker Compose V2
+- Git
+- Nginx (for reverse proxy)
+- curl (for health checks)
+
+### Cloudflare Account (Frontend)
+
+You'll need:
+- A Cloudflare account (free tier works)
+- A domain configured in Cloudflare DNS
+- Cloudflare Pages access
+- Cloudflare Turnstile site (free, for bot protection)
+
+### Development Machine (Optional)
+
+For local development:
+- Node.js 18+ (recommended: 20 LTS)
+- pnpm 8+
+- Git
+
+## Installation Steps
+
+<Steps>
+  <Step title="Prepare your VPS">
+    SSH into your VPS and install required packages:
+    
+    ```bash
+    # Update system packages
+    sudo apt update && sudo apt upgrade -y
+    
+    # Install Docker
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    
+    # Install Docker Compose V2 (if not included)
+    sudo apt install docker-compose-plugin -y
+    
+    # Add your user to docker group (optional, to run without sudo)
+    sudo usermod -aG docker $USER
+    newgrp docker
+    
+    # Install Git and other tools
+    sudo apt install git nginx curl -y
+    ```
+    
+    Verify installation:
+    ```bash
+    docker --version
+    docker compose version
+    git --version
+    ```
+  </Step>
+
+  <Step title="Clone the repository">
+    Create a directory for PocketBase and clone the repo:
+    
+    ```bash
+    # Create pb-docker directory in home
+    mkdir -p ~/pb-docker
+    cd ~/pb-docker
+    
+    # Clone the repository (adjust URL to your fork if self-hosting)
+    git clone https://github.com/ayamkv/sptfyin.git .
+    
+    # Or if you forked it:
+    # git clone https://github.com/YOUR_USERNAME/sptfyin.git .
+    ```
+    
+    <Note>
+    The production deployment uses `~/pb-docker` as the working directory. The GitHub Actions deployment workflow expects this path.
+    </Note>
+  </Step>
+
+  <Step title="Set up Cloudflare Turnstile">
+    Turnstile provides bot protection for the link creation form.
+    
+    1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → Turnstile
+    2. Create a new site:
+       - **Site name**: sptfyin (or your domain)
+       - **Domain**: your-domain.com
+       - **Widget mode**: Managed
+    3. Copy the **Secret Key** (you'll need this for `.env`)
+    4. Copy the **Site Key** (you'll need this for frontend env vars)
+    
+    <Warning>
+    Keep your secret key secure. Never commit it to git or expose it publicly.
+    </Warning>
+  </Step>
+
+  <Step title="Create environment file">
+    Create a `.env` file in the `~/pb-docker` directory:
+    
+    ```bash
+    cd ~/pb-docker
+    cp .env.example .env
+    nano .env
+    ```
+    
+    Edit the file and add your Cloudflare Turnstile secret:
+    
+    ```bash
+    # Cloudflare Turnstile secret key
+    CF_SECRET_KEY=your_actual_secret_key_here
+    ```
+    
+    Save and exit (Ctrl+X, then Y, then Enter).
+    
+    <Warning>
+    The `.env` file is gitignored. Do NOT commit it to version control.
+    </Warning>
+  </Step>
+
+  <Step title="Verify Docker Compose configuration">
+    Check the `docker-compose.yml` to understand the setup:
+    
+    ```bash
+    cat ~/pb-docker/docker-compose.yml
+    ```
+    
+    Key configuration points:
+    - **Image**: `ghcr.io/muchobien/pocketbase:0.23.12`
+    - **Port**: `8091:8090` (host port 8091 maps to container port 8090)
+    - **Volumes**: Persistent data in `./pb_data`, `./pb_public`, `./pocketbase/pb_hooks`, `./pocketbase/pb_migrations`
+    - **Health check**: HTTP check on `/api/health` every 60 seconds
+    - **Timezone**: `Asia/Jakarta` (change if needed)
+    - **Environment**: `CF_SECRET_KEY` from `.env` file
+  </Step>
+
+  <Step title="Start PocketBase">
+    Launch the PocketBase container:
+    
+    ```bash
+    cd ~/pb-docker
+    docker compose up -d
+    ```
+    
+    Check the logs:
+    ```bash
+    docker compose logs -f
+    ```
+    
+    You should see output indicating PocketBase is running. Press Ctrl+C to exit logs.
+  </Step>
+
+  <Step title="Verify PocketBase is running">
+    Test the health endpoint:
+    
+    ```bash
+    curl http://localhost:8091/api/health
+    ```
+    
+    Expected response:
+    ```json
+    {"code":200,"message":"API is healthy.","data":{}}
+    ```
+    
+    <Note>
+    If you get a connection error, wait 10-20 seconds for the container to fully start, then try again.
+    </Note>
+  </Step>
+</Steps>
+
+## Next Steps
+
+Now that PocketBase is installed:
+1. [Set up the database](/self-hosting/database-setup) - Create admin account and configure collections
+2. [Configure environment variables](/self-hosting/configuration) - Set up all required settings
+3. [Deploy to production](/self-hosting/deployment) - Set up Nginx reverse proxy and Cloudflare Pages
+
+## Troubleshooting
+
+### Docker permission denied
+
+```bash
+Got permission denied while trying to connect to the Docker daemon socket
+```
+
+**Solution**: Add your user to the docker group:
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### Port 8091 already in use
+
+**Solution**: Check what's using the port:
+```bash
+sudo lsof -i :8091
+```
+
+Either stop the conflicting service or change the port in `docker-compose.yml`:
+```yaml
+ports:
+  - '8092:8090'  # Use port 8092 instead
+```
+
+### Container keeps restarting
+
+**Solution**: Check the logs for errors:
+```bash
+docker compose logs pocketbase
+```
+
+Common issues:
+- Missing `.env` file or invalid `CF_SECRET_KEY`
+- Corrupted data in `./pb_data` (delete and restart for fresh install)
+- Insufficient disk space (`df -h` to check)

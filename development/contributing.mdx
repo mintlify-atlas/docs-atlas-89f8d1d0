@@ -1,0 +1,527 @@
+---
+title: Contributing Guidelines
+description: How to contribute to sptfy.in development
+---
+
+Thank you for considering contributing to sptfy.in! This guide will help you get started with contributing code, reporting bugs, and suggesting features.
+
+## Getting Started
+
+Before contributing, please:
+
+1. Read the [Local Setup](/development/local-setup) guide
+2. Familiarize yourself with the [Tech Stack](/development/tech-stack)
+3. Review the [AGENTS.md](https://github.com/ayamkv/sptfyin/blob/main/AGENTS.md) coding guidelines
+
+## Development Workflow
+
+### 1. Fork and Clone
+
+```bash
+# Fork the repository on GitHub, then:
+git clone https://github.com/YOUR_USERNAME/sptfyin.git
+cd sptfyin
+```
+
+### 2. Create a Feature Branch
+
+```bash
+# Create a focused feature branch from main
+git checkout -b feat/your-feature-name
+```
+
+**Branch naming conventions:**
+
+- `feat/` - New features
+- `fix/` - Bug fixes
+- `docs/` - Documentation updates
+- `refactor/` - Code refactoring
+- `chore/` - Maintenance tasks
+
+### 3. Make Changes
+
+Follow the code style guidelines below and make your changes.
+
+### 4. Checkpoint Commits
+
+<Warning>
+**Commit early, commit often.** Use checkpoint commits to prevent lost work.
+</Warning>
+
+**When to commit:**
+
+- After completing any logical unit of work (even partial)
+- Before switching to a different task
+- After 30+ minutes of active coding
+- When 5+ files have been modified
+- Before ending any session (mandatory)
+
+**Commit message prefixes:**
+
+```bash
+# Work in progress (can be squashed later)
+git commit -m "wip: add user profile component structure"
+
+# Stable checkpoint (incomplete)
+git commit -m "checkpoint: profile page layout complete, styles pending"
+
+# Complete feature
+git commit -m "feat: add user profile page with avatar upload"
+
+# Bug fix
+git commit -m "fix: resolve login redirect issue"
+
+# Maintenance
+git commit -m "chore: update dependencies"
+
+# Refactoring
+git commit -m "refactor: extract auth logic to utility"
+
+# Documentation
+git commit -m "docs: update contributing guidelines"
+```
+
+**Example checkpoint flow:**
+
+```bash
+# After 30 mins of work on a feature
+git add -A && git commit -m "wip: add user profile component structure"
+
+# Before switching to fix a bug
+git add -A && git commit -m "checkpoint: profile page layout complete, styles pending"
+
+# When feature is done
+git add -A && git commit -m "feat: add user profile page with avatar upload"
+```
+
+### 5. Run Quality Gates
+
+Before creating a PR, ensure all quality gates pass:
+
+```bash
+# Build for production
+pnpm build
+
+# Run linters
+pnpm lint
+
+# (Optional) Run tests
+vitest
+```
+
+### 6. Create a Pull Request
+
+When your feature is complete and tested:
+
+```bash
+# Push to your fork
+git push origin feat/your-feature-name
+```
+
+Then create a PR on GitHub with this template:
+
+```markdown
+## Summary
+
+Brief description of what this PR does and why.
+
+## Changes
+
+- Change 1
+- Change 2
+- Change 3
+
+## Testing
+
+- [x] Tested locally with `pnpm dev`
+- [x] Build passes (`pnpm build`)
+- [x] Lint passes (`pnpm lint`)
+
+## Screenshots (if UI changes)
+
+<!-- Add screenshots here -->
+```
+
+**PR title format:** Use the same prefixes as commit messages
+
+- `feat: add user profile page`
+- `fix: resolve login redirect issue`
+- `docs: update API documentation`
+
+## Code Style Guidelines
+
+### General Rules
+
+From `.prettierrc`:
+
+- **Indentation:** Use tabs, not spaces
+- **Quotes:** Single quotes (`'`) instead of double quotes
+- **Trailing commas:** None
+- **Line width:** Max 100 characters
+- **Semicolons:** Not required (Prettier handles it)
+
+### Svelte 5 Patterns
+
+<Warning>
+**Always use Svelte 5 runes.** Do NOT use `let` or `export let` for reactive variables.
+</Warning>
+
+#### Reactive State
+
+```svelte
+<script>
+	// ✅ Correct: Use $state()
+	let count = $state(0);
+
+	// ❌ Wrong: Do not use plain let
+	let count = 0;
+</script>
+```
+
+#### Computed Values
+
+```svelte
+<script>
+	let count = $state(0);
+
+	// ✅ Correct: Use $derived()
+	let doubled = $derived(count * 2);
+
+	// ❌ Wrong: Do not use reactive statements
+	$: doubled = count * 2;
+</script>
+```
+
+#### Props
+
+```svelte
+<script>
+	// ✅ Correct: Use $props()
+	const { title, description } = $props();
+
+	// ❌ Wrong: Do not use export let
+	export let title;
+	export let description;
+</script>
+```
+
+#### Event Handlers
+
+```svelte
+<script>
+	import { preventDefault } from '$lib/utils';
+
+	function handleSubmit() {
+		// Handle form submission
+	}
+</script>
+
+<form onsubmit={preventDefault(handleSubmit)}>
+	<!-- form fields -->
+</form>
+```
+
+### Component Structure
+
+```svelte
+<script>
+	// 1. Imports (framework first, then libraries, then local)
+	import { onMount } from 'svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { myUtil } from '$lib/utils';
+
+	// 2. Props
+	const { title, items = [] } = $props();
+
+	// 3. State
+	let isOpen = $state(false);
+
+	// 4. Derived values
+	let count = $derived(items.length);
+
+	// 5. Lifecycle and effects
+	onMount(() => {
+		// Component mounted
+	});
+
+	// 6. Functions
+	function handleClick() {
+		isOpen = !isOpen;
+	}
+</script>
+
+<!-- 7. Markup -->
+<div>
+	<h1>{title}</h1>
+	<Button onclick={handleClick}>Toggle</Button>
+</div>
+
+<!-- 8. Styles (if needed) -->
+<style>
+	/* Component-scoped styles */
+</style>
+```
+
+### File Naming
+
+- **Components:** `kebab-case.svelte` (e.g., `user-profile.svelte`)
+- **Routes:** `+page.svelte`, `+server.js`, `+layout.svelte`
+- **Utilities:** `camelCase.js` (e.g., `formatDate.js`)
+- **PocketBase hooks:** `*.pb.js` (e.g., `random.pb.js`)
+
+### Imports
+
+```svelte
+<script>
+	// Use shadcn components from $lib/components/ui/
+	import { Button } from '$lib/components/ui/button';
+	import { Dialog, DialogContent } from '$lib/components/ui/dialog';
+
+	// Use PocketBase from $lib/pocketbase.js
+	import { pb } from '$lib/pocketbase';
+
+	// Use Iconify icons
+	import 'iconify-icon';
+</script>
+
+<Button>Click me</Button>
+<iconify-icon icon="lucide:user" />
+```
+
+### Error Handling
+
+#### Try/Catch for Async Operations
+
+```svelte
+<script>
+	import { pb } from '$lib/pocketbase';
+	import { toast } from 'svelte-sonner';
+
+	async function createLink() {
+		try {
+			const record = await pb.collection('random_short').create({
+				slug: 'my-slug',
+				url: 'https://example.com'
+			});
+			toast.success('Link created successfully!');
+		} catch (error) {
+			toast.error('Failed to create link', {
+				description: error.message
+			});
+		}
+	}
+</script>
+```
+
+#### AlertDialog for Errors
+
+```svelte
+<script>
+	import { AlertDialog, AlertDialogContent } from '$lib/components/ui/alert-dialog';
+
+	let errorOpen = $state(false);
+	let errorMessage = $state('');
+
+	function handleError(error) {
+		errorMessage = error.message;
+		errorOpen = true;
+	}
+</script>
+
+<AlertDialog bind:open={errorOpen}>
+	<AlertDialogContent>
+		<iconify-icon icon="lucide:alert-circle" />
+		<h2>Error</h2>
+		<p>{errorMessage}</p>
+	</AlertDialogContent>
+</AlertDialog>
+```
+
+## Testing
+
+### Unit Tests
+
+Tests are located in `src/lib/**tests**` and use Vitest:
+
+```javascript
+import { describe, it, expect } from 'vitest';
+import { formatDate } from '$lib/utils/formatDate';
+
+describe('formatDate', () => {
+	it('formats date correctly', () => {
+		const date = new Date('2025-01-01');
+		expect(formatDate(date)).toBe('January 1, 2025');
+	});
+});
+```
+
+Run tests:
+
+```bash
+vitest
+```
+
+### Manual Testing
+
+Before submitting a PR:
+
+1. **Start local PocketBase** (for data-backed routes)
+2. **Test in browser:** [http://127.0.0.1:5173](http://127.0.0.1:5173)
+3. **Test key user flows:**
+   - Creating a short link
+   - Spotify OAuth login
+   - Dashboard navigation
+   - Link analytics
+
+## Merge Strategy
+
+### Squash Merge Policy
+
+All PRs to `main` use **squash merges**:
+
+- Keeps main branch history clean (one commit per feature/fix)
+- PR title becomes the commit message
+- Individual commits preserved in PR for context
+- Use "Squash and merge" button in GitHub
+
+### After Merge
+
+1. Delete the feature branch (GitHub offers this automatically)
+2. Pull latest main locally:
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+3. Close related issues (if using beads):
+   ```bash
+   bd close <issue-id>
+   ```
+
+## Issue Tracking with Beads
+
+This project uses **beads** (bd) for git-native issue tracking.
+
+**Key commands:**
+
+```bash
+# Show ready work (no blockers)
+bd ready
+
+# List all issues
+bd list
+
+# Create new issue
+bd create "Issue title" -p 1 -t task
+
+# Update issue status
+bd update <id> --status in_progress
+bd update <id> --status closed
+
+# Close completed issue
+bd close <id>
+
+# Sync beads with git (run before push)
+bd sync
+```
+
+**Priority Levels:** P1 (critical), P2 (medium), P3 (low)  
+**Types:** task, bug, feature, docs, refactor
+
+**Workflow:**
+
+1. Check `bd ready` for available tasks
+2. Pick an issue and update status to `in_progress`
+3. Work on the feature/fix
+4. Run quality gates (`pnpm build`, `pnpm lint`)
+5. Create PR
+6. After merge, `bd close <issue-id>`
+7. Sync: `bd sync && git push`
+
+## Direct Commits to Main
+
+<Warning>
+Direct commits to `main` are **only allowed** for:
+
+- Hotfixes (critical bugs in production)
+- Documentation updates
+- Config/dependency updates
+
+All other changes must go through the PR workflow.
+</Warning>
+
+## Deployment
+
+### Automatic Deployment
+
+Pushing to `main` triggers:
+
+1. **Frontend:** Cloudflare Pages auto-deploys SvelteKit app
+2. **Backend:** GitHub Action deploys PocketBase to VPS (if hooks/migrations changed)
+
+### Quality Gates (CI)
+
+All PRs must pass:
+
+- `pnpm lint` - ESLint and Prettier checks
+- `pnpm build` - Production build succeeds
+
+## Rollback Procedures
+
+### Frontend Rollback (Cloudflare Pages)
+
+1. Go to Cloudflare Dashboard → Pages → sptfyin
+2. Select previous deployment from history
+3. Click "Rollback to this deployment"
+4. Instant - no downtime
+
+### Backend Rollback (PocketBase VPS)
+
+**Policy:** Forward-fix preferred over rollback due to migration constraints.
+
+**If rollback required:**
+
+1. SSH to VPS: `ssh user@your-vps`
+2. Stop container: `docker compose down`
+3. Restore database from backup (Cloudflare R2)
+4. Rollback git: `git checkout <previous-commit>`
+5. Restart: `docker compose up -d`
+6. Verify: `curl http://localhost:8091/api/health`
+
+## License
+
+By contributing to sptfy.in, you agree that your contributions will be licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](https://github.com/ayamkv/sptfyin/blob/main/LICENSE).
+
+**Key points:**
+
+- This is a **copyleft license** requiring derivative works to be open-source
+- Network use (running on a server) counts as distribution
+- Modified versions must offer source code to users
+- Commercial use is allowed
+
+Read the full license: [LICENSE](https://github.com/ayamkv/sptfyin/blob/main/LICENSE)
+
+## Getting Help
+
+- **Documentation:** Check this documentation site first
+- **Issues:** Search [existing issues](https://github.com/ayamkv/sptfyin/issues) or create a new one
+- **AGENTS.md:** Review the [coding agent guidelines](https://github.com/ayamkv/sptfyin/blob/main/AGENTS.md) for detailed patterns
+- **Contact:** Reach out to [@ayamkv](https://github.com/ayamkv) for questions
+
+## Code of Conduct
+
+Be respectful and constructive:
+
+- Use welcoming and inclusive language
+- Be respectful of differing viewpoints
+- Accept constructive criticism gracefully
+- Focus on what's best for the project and community
+
+## Recognition
+
+Contributors are recognized in:
+
+- GitHub's contributor graph
+- Release notes (for significant features)
+- The project's README acknowledgements section
+
+Thank you for contributing to sptfy.in!

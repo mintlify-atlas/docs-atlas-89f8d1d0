@@ -1,0 +1,292 @@
+---
+title: Local Development Setup
+description: Set up your local development environment for sptfy.in
+---
+
+This guide walks you through setting up a complete local development environment for sptfy.in, including both the SvelteKit frontend and PocketBase backend.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- **Node.js 18+** - [Download](https://nodejs.org/)
+- **pnpm** - Install with `npm install -g pnpm`
+- **PocketBase v0.23.12** binary (instructions below)
+- **Git** - For cloning the repository
+
+## Architecture Overview
+
+| Component | Production | Local Development |
+|-----------|------------|-------------------|
+| Frontend | Cloudflare Pages | `pnpm dev` (localhost:5173) |
+| Backend | VPS (PocketBase v0.23.12) | Local PocketBase binary |
+| Database | Production SQLite | Fresh local SQLite |
+
+## Quick Start
+
+Once you've completed the setup, starting the development environment is simple:
+
+```bash
+# Terminal 1: Start PocketBase backend
+cd pocketbase
+
+# Windows
+start-dev.bat
+
+# Linux/macOS
+CF_SECRET_KEY=1x0000000000000000000000000000000AA ./pocketbase serve
+
+# Terminal 2: Start SvelteKit frontend
+pnpm dev
+
+# Open http://127.0.0.1:5173 in your browser
+```
+
+## First-Time Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/ayamkv/sptfyin.git
+cd sptfyin
+```
+
+### 2. Install Dependencies
+
+```bash
+pnpm install
+```
+
+<Note>
+The project uses pnpm exclusively. The `preinstall` script will prevent npm or yarn from being used.
+</Note>
+
+### 3. Download PocketBase v0.23.12
+
+<Warning>
+Use **v0.23.12** specifically to match production. Later versions may have breaking changes.
+</Warning>
+
+Download from: [PocketBase v0.23.12 Releases](https://github.com/pocketbase/pocketbase/releases/tag/v0.23.12)
+
+| Operating System | File to Download |
+|-----------------|------------------|
+| Windows | `pocketbase_0.23.12_windows_amd64.zip` |
+| macOS (Intel) | `pocketbase_0.23.12_darwin_amd64.zip` |
+| macOS (Apple Silicon) | `pocketbase_0.23.12_darwin_arm64.zip` |
+| Linux | `pocketbase_0.23.12_linux_amd64.zip` |
+
+Extract the `pocketbase` (or `pocketbase.exe`) binary into the `pocketbase/` folder at the root of the project.
+
+### 4. Start PocketBase
+
+```bash
+cd pocketbase
+
+# Windows: Use the batch file (sets required env vars)
+start-dev.bat
+
+# Linux/macOS: Set CF_SECRET_KEY manually
+CF_SECRET_KEY=1x0000000000000000000000000000000AA ./pocketbase serve
+```
+
+On first run, PocketBase will:
+- Create the `pb_data/` directory
+- Load hooks from `pb_hooks/`
+- Start the admin UI at `http://127.0.0.1:8090/_/`
+
+### 5. Create Admin Account
+
+1. Open [http://127.0.0.1:8090/_/](http://127.0.0.1:8090/_/)
+2. Create your admin email and password
+3. This is your local admin - use any credentials you want
+
+### 6. Import Database Schema
+
+The `pb_migrations/` folder is empty by default. Import the schema from production:
+
+1. Go to production PocketBase admin: [https://pbbase.sptfy.in/_/](https://pbbase.sptfy.in/_/)
+2. Navigate to **Settings** > **Export collections**
+3. Click **Export** to download the JSON file
+4. In your local PocketBase admin (`http://127.0.0.1:8090/_/`):
+   - Go to **Settings** > **Import collections**
+   - Upload the JSON file
+   - Click **Review** then **Confirm import**
+
+This imports all collections (`users`, `random_short`, `analytics`, etc.) with their rules and fields.
+
+### 7. Configure Spotify OAuth
+
+To test authentication features locally:
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Create a new app or use an existing one
+3. In **App Settings**, add this redirect URI:
+   ```
+   http://127.0.0.1:5173/auth/spotify/callback
+   ```
+   <Warning>
+   Use `127.0.0.1`, NOT `localhost`. Spotify changed their policy in April 2025.
+   </Warning>
+
+4. In local PocketBase admin (`http://127.0.0.1:8090/_/`):
+   - Go to **Settings** > **Auth providers**
+   - Enable **Spotify**
+   - Enter your **Client ID** and **Client Secret**
+
+### 8. Environment Variables
+
+The `.env.development` file should already exist with these values:
+
+```env
+VITE_DEBUG_MODE=false
+
+# Turnstile test keys (always pass)
+VITE_CF_SECRET=1x0000000000000000000000000000000AA
+VITE_CF_SITE_KEY=1x00000000000000000000AA
+
+# Local PocketBase
+VITE_POCKETBASE_URL=http://127.0.0.1:8090
+
+# IMPORTANT: Use 127.0.0.1, NOT localhost
+VITE_APP_URL=http://127.0.0.1:5173
+```
+
+<Note>
+For local overrides, create `.env.development.local` (gitignored).
+</Note>
+
+### 9. Start the Frontend
+
+```bash
+pnpm dev
+```
+
+The app will be available at [http://127.0.0.1:5173](http://127.0.0.1:5173)
+
+## Directory Structure
+
+```
+sptfyin/
+├── pocketbase/
+│   ├── pocketbase.exe      # PocketBase binary (download separately, gitignored)
+│   ├── pb_data/            # Database files (created on first run, gitignored)
+│   ├── pb_hooks/           # Server-side hooks (committed)
+│   │   ├── main.pb.js      # Custom routes
+│   │   └── random.pb.js    # Turnstile, record protection, OAuth hooks
+│   ├── pb_migrations/      # Schema migrations (committed)
+│   └── pb_public/          # Static files served by PocketBase
+├── src/                    # SvelteKit app
+│   ├── lib/                # Shared components and utilities
+│   ├── routes/             # SvelteKit routes (+page.svelte files)
+│   └── app.html            # HTML template
+├── static/                 # Static assets
+├── .env.development        # Dev environment variables
+├── package.json            # Dependencies and scripts
+└── svelte.config.js        # SvelteKit configuration
+```
+
+## PocketBase Hooks
+
+The `pb_hooks/` folder contains server-side JavaScript hooks that run on the PocketBase backend:
+
+### `random.pb.js`
+
+| Hook | Purpose |
+|------|--------|
+| `onRecordCreateRequest` (analytics) | Logs IP geolocation on record creation |
+| `onRecordCreateRequest` (random_short) | Validates Turnstile token before creating short links |
+| `onRecordUpdateRequest` | Protects fields from unauthorized modification |
+| `onRecordAuthRequest` (users) | Extracts Spotify user ID on OAuth login |
+
+### `main.pb.js`
+
+Custom API routes (e.g., `/hello/{name}` test endpoint).
+
+## Turnstile in Development
+
+Local development uses Cloudflare's official **test keys** that always pass verification:
+
+| Key | Value |
+|-----|-------|
+| Site Key | `1x00000000000000000000AA` |
+| Secret Key | `1x0000000000000000000000000000000AA` |
+
+No actual CAPTCHA verification occurs during local development.
+
+## Testing Data-Backed Routes
+
+<Warning>
+If you're testing routes that fetch data from PocketBase (like `/recent`, `/top`, `/dash/links`), **always start local PocketBase first**.
+
+Without PocketBase running, these routes will fail to load and UI behavior checks become unreliable.
+</Warning>
+
+## Common Issues
+
+### "localhost is not allowed as redirect URI"
+
+Spotify changed their rules in April 2025. Use `127.0.0.1` instead:
+
+- In `.env.development`: `VITE_APP_URL=http://127.0.0.1:5173`
+- In browser: Access via `http://127.0.0.1:5173`
+- In Spotify Dashboard: Use `http://127.0.0.1:5173/auth/spotify/callback`
+
+### "PocketBase connection refused"
+
+Make sure PocketBase is running:
+
+```bash
+cd pocketbase && ./pocketbase serve
+```
+
+### "Migrations failed"
+
+If migrations fail, start fresh:
+
+```bash
+cd pocketbase
+rm -rf pb_data
+./pocketbase serve
+```
+
+Then repeat the schema import steps.
+
+### Hooks not loading
+
+Check PocketBase console output. Hooks must:
+- Be in the `pb_hooks/` directory
+- End with `.pb.js` extension
+- Have valid JavaScript syntax
+
+## Docker Alternative (Optional)
+
+If you prefer Docker over running the binary directly:
+
+```yaml title="docker-compose.dev.yml"
+services:
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:0.23.12
+    container_name: sptfyin-pocketbase-dev
+    ports:
+      - '8090:8090'
+    volumes:
+      - ./pocketbase/pb_data:/pb_data
+      - ./pocketbase/pb_hooks:/pb_hooks
+      - ./pocketbase/pb_migrations:/pb_migrations
+      - ./pocketbase/pb_public:/pb_public
+    environment:
+      CF_SECRET_KEY: '1x0000000000000000000000000000000AA'
+```
+
+Run with:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+## Next Steps
+
+- Learn about the [Tech Stack](/development/tech-stack)
+- Read the [Contributing Guidelines](/development/contributing)
+- Check the [AGENTS.md](https://github.com/ayamkv/sptfyin/blob/main/AGENTS.md) for AI coding agent guidelines

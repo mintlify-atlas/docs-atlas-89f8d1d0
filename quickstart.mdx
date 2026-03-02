@@ -1,80 +1,320 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quick Start"
+description: "Start shortening Spotify links in under 30 seconds"
 ---
 
-## Get started in three steps
+## Shorten Your First Link
 
-Get your documentation site running locally and make your first customization.
+Get started with sptfy.in in four simple steps. No account required.
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Visit sptfy.in">
+    Open [sptfy.in](https://sptfy.in) in your browser.
+    
+    You'll see a clean interface with a URL input field and a "paste" button.
+  </Step>
+  
+  <Step title="Paste Your Spotify URL">
+    Copy any Spotify link from the Spotify app or web player:
+    
+    ```text
+    https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT?si=abc123def456
+    ```
+    
+    Then either:
+    - Click the **paste button** (clipboard icon)
+    - Or manually paste into the input field
+    
+    <Tip>
+      sptfy.in automatically detects and extracts Spotify URLs from clipboard content.
+    </Tip>
+    
+    <Note>
+      **spotify.link URLs**: If you paste a `spotify.link` short URL, sptfy.in will automatically expand it to the full Spotify URL before processing.
+    </Note>
+  </Step>
+  
+  <Step title="Click 'short It!'">
+    Once your URL is in the input field, click the green **short It!** button.
+    
+    The button will show:
+    - `validating...` - Cloudflare Turnstile is verifying you're human
+    - `loading...` - Your link is being created
+    - `Success 🥳` - Your short link is ready!
+    
+    <Warning>
+      The button may say `validating...` while Cloudflare Turnstile checks for bots. This typically completes in 1-2 seconds.
+    </Warning>
+  </Step>
+  
+  <Step title="Copy & Share">
+    Your shortened link appears in the right panel:
+    
+    ```
+    sptfy.in/a1b2
+    ```
+    
+    Click the **copy button** to copy it to your clipboard, or click the **open** button to test it.
+    
+    <img src="/images/url-preview.png" alt="URL preview panel" />
+  </Step>
+</Steps>
+
+## Optional: Customize Your Link
+
+Want a memorable URL instead of a random one? Use custom slugs.
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+  <Accordion icon="pencil" title="Add a Custom Slug">
+    1. Click **customize** below the URL input field
+    2. Choose a domain (optional):
+       - `sptfy.in` (default)
+       - `artist.sptfy.in`
+       - `playlist.sptfy.in`
+       - `track.sptfy.in`
+       - `profile.sptfy.in`
+    3. Type your custom slug (minimum 4 characters)
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+    ```
+    sptfy.in/my-favorite-jazz
+    ```
+    
+    The slug field shows real-time validation:
+    - 🟢 Green border = Available
+    - 🟡 Yellow border = Checking...
+    - 🔴 Red border = Taken or invalid
+    
+    <Tip>
+      Custom slugs are automatically sanitized:
+      - Converted to lowercase
+      - Special characters replaced with hyphens
+      - Leading/trailing hyphens removed
+    </Tip>
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+  
+  <Accordion icon="ban" title="Reserved Slugs">
+    Some slugs are reserved for sptfy.in system pages and cannot be used:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+    - `recent`, `top`, `about`, `terms`, `privacy`
+    - `login`, `prev`, `dash`, `debug`, `api`, `admin`
+    
+    If you try to use a reserved slug, you'll see an error.
+  </Accordion>
+  
+  <Accordion icon="ruler" title="Slug Requirements">
+    Custom slugs must:
+    - Be at least **4 characters** long
+    - Contain only letters, numbers, hyphens, and underscores
+    - Not exceed **80 characters**
+    - Be unique (not already taken)
+    
+    Examples:
+    - ✅ `my-playlist`
+    - ✅ `jazz_2024`
+    - ✅ `workout-mix`
+    - ❌ `abc` (too short)
+    - ❌ `my playlist` (spaces not allowed)
+    - ❌ `recent` (reserved)
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## View Link Analytics
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+Every shortened link comes with built-in click tracking.
+
+<Steps>
+  <Step title="Click 'Show Clicks'">
+    After creating a link, click the **Show Clicks** button in the URL preview panel.
+  </Step>
+  
+  <Step title="View Analytics Dashboard">
+    You'll see:
+    - Total click count
+    - Click history with timestamps
+    - Geographic data (coming soon)
+    - Bot detection status
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <Note>
+      Analytics are **public by default**. Anyone with the link can view click stats by adding `/s` to the URL: `sptfy.in/a1b2/s`
+    </Note>
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Generate QR Codes
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Share your Spotify links offline with QR codes.
 
-### Step 3: Go live
+<Steps>
+  <Step title="Click 'Show QR'">
+    After creating a link, click the **Show QR** button in the URL preview panel.
+  </Step>
+  
+  <Step title="Download or Share">
+    A QR code is generated automatically. You can:
+    - **Download** the QR code as a PNG image
+    - **Scan** it directly with your phone to test
+    
+    <Tip>
+      QR codes are generated dynamically and always point to your shortened URL.
+    </Tip>
+  </Step>
+</Steps>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## Supported Link Types
 
-## Next steps
-
-Now that you have your docs running, explore these key features:
+sptfy.in accepts all Spotify content URLs:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Tracks" icon="music">
+    ```
+    open.spotify.com/track/...
+    ```
+  </Card>
+  
+  <Card title="Albums" icon="compact-disc">
+    ```
+    open.spotify.com/album/...
+    ```
+  </Card>
+  
+  <Card title="Playlists" icon="list">
+    ```
+    open.spotify.com/playlist/...
+    ```
+  </Card>
+  
+  <Card title="Artists" icon="user">
+    ```
+    open.spotify.com/artist/...
+    ```
+  </Card>
 </CardGroup>
 
+## What Happens Behind the Scenes
+
+When you shorten a link, here's what sptfy.in does:
+
+<Steps>
+  <Step title="URL Validation">
+    The URL is checked to ensure it's a valid Spotify URL. Only `open.spotify.com` and `spotify.link` URLs are accepted.
+    
+    ```javascript
+    // From src/lib/utils.js
+    const spotifyUrlPattern = /https:\/\/open\.spotify\.com\/(track|album|playlist|artist|show|episode)\/[a-zA-Z0-9]+/;
+    ```
+  </Step>
+  
+  <Step title="Bot Detection">
+    Cloudflare Turnstile verifies you're human (not a bot). This happens automatically in the background.
+    
+    ```javascript
+    // From src/routes/+page.svelte
+    <Turnstile
+      siteKey={turnstileKey}
+      theme="dark"
+      appearance="interaction-only"
+      on:callback={(event) => {
+        turnstileResponse = event.detail.token;
+      }}
+    />
+    ```
+  </Step>
+  
+  <Step title="Slug Generation or Validation">
+    If you provided a custom slug, sptfy.in checks if it's available. Otherwise, it generates a random 4-character slug.
+    
+    ```javascript
+    // From src/lib/pocketbase.js
+    const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz';
+    const generateNanoId = customAlphabet(alphabet, 4);
+    ```
+  </Step>
+  
+  <Step title="Database Storage">
+    The mapping (short slug → Spotify URL) is saved to PocketBase.
+    
+    ```javascript
+    // From src/routes/api/links/+server.js
+    const data = {
+      from: spotifyUrl,
+      id_url: slug,
+      subdomain: 'sptfy.in',
+      enable: true
+    };
+    await pb.collection('random_short').create(data);
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+Now that you've created your first short link, explore more features:
+
+<CardGroup cols={2}>
+  <Card
+    title="Manage Your Links"
+    icon="folder-open"
+    href="/guides/managing-links"
+  >
+    Learn how to view, edit, and delete your links with an account.
+  </Card>
+  
+  <Card
+    title="Deep Dive into Analytics"
+    icon="chart-simple"
+    href="/guides/analytics"
+  >
+    Understand click tracking, bot detection, and export options.
+  </Card>
+  
+  <Card
+    title="API Integration"
+    icon="code"
+    href="/api/authentication"
+  >
+    Automate link creation with the sptfy.in API.
+  </Card>
+  
+  <Card
+    title="Self-Host sptfy.in"
+    icon="server"
+    href="/self-hosting/installation"
+  >
+    Deploy your own instance for full control and privacy.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="circle-exclamation" title="'No Spotify URL found in clipboard'">
+    This error appears if you click the paste button but your clipboard doesn't contain a Spotify URL.
+    
+    **Solution**: Copy a Spotify link first, then click paste. Or manually paste the URL into the input field.
+  </Accordion>
+  
+  <Accordion icon="shield-halved" title="'Validating...' button stuck">
+    The button may stay on `validating...` if Cloudflare Turnstile fails to load or verify.
+    
+    **Solutions**:
+    - Wait a few seconds—Turnstile usually completes automatically
+    - Check your ad blocker settings (some block Turnstile)
+    - Refresh the page and try again
+  </Accordion>
+  
+  <Accordion icon="copy" title="'Slug taken' error">
+    Your custom slug is already in use by another link.
+    
+    **Solution**: Choose a different slug. The input field shows real-time availability as you type.
+  </Accordion>
+  
+  <Accordion icon="timer" title="'Rate limit exceeded'">
+    You've created too many links in a short time period.
+    
+    **Solution**: Wait a few minutes before creating more links. Rate limits reset automatically.
+  </Accordion>
+</AccordionGroup>
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Need more help?** Check the [GitHub Issues](https://github.com/ayamkv/sptfyin/issues) or visit the [status page](https://status.sptfy.in) for service updates.
 </Note>

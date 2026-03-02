@@ -1,0 +1,430 @@
+---
+title: Understanding Analytics
+description: Track clicks, analyze traffic, and understand your audience with sptfy.in analytics
+---
+
+## Analytics Overview
+
+sptfy.in provides **free, privacy-focused analytics** for every shortened link you create. Track clicks, understand your audience, and measure the impact of your Spotify shares.
+
+<Note>
+**Privacy-first approach:** Analytics data is anonymized. We track aggregate statistics without storing personally identifiable information.
+</Note>
+
+### What You Can Track
+
+- **Total clicks** - How many times your link was clicked
+- **Interactions** - Total engagement count (includes bot-filtered traffic)
+- **Geographic data** - Which countries your audience is from
+- **Browser usage** - Which browsers people use (Chrome, Firefox, Safari, etc.)
+- **Operating systems** - Desktop vs mobile, Windows vs Mac vs Android vs iOS
+- **Click timestamps** - When people clicked your links
+
+## Accessing Analytics
+
+### From the Homepage
+
+After creating a link on [sptfy.in](https://sptfy.in):
+
+<Steps>
+  <Step title="Create a shortened link">
+    Follow the [Creating Links guide](/guides/creating-links) to shorten a Spotify URL.
+  </Step>
+
+  <Step title="Click 'Show Clicks'">
+    In the URL preview section, click the **Show Clicks** button.
+  </Step>
+
+  <Step title="View analytics page">
+    You'll be redirected to `sptfy.in/[your-slug]/s` showing detailed analytics.
+  </Step>
+</Steps>
+
+### Direct URL Access
+
+Navigate directly to the analytics page:
+
+```
+https://sptfy.in/[your-slug]/s
+```
+
+**Example:**
+- Short link: `sptfy.in/summer-vibes`
+- Analytics: `sptfy.in/summer-vibes/s`
+
+<Tip>
+**Bookmark analytics:** Save the `/s` URL for links you want to monitor regularly.
+</Tip>
+
+### From the Dashboard
+
+In the [Dashboard](/guides/managing-links), each link card shows a **view count** (eye icon). Click **Open** to visit the short link, then append `/s` to the URL to view analytics.
+
+**Future feature:** Direct analytics link from dashboard (coming soon).
+
+## Analytics Dashboard Layout
+
+The analytics page displays three main sections:
+
+### 1. URL Stats Card
+
+Shows your shortened link with action buttons:
+
+**Card contents:**
+- **Short URL** - `sptfy.in/[slug]` (displayed large)
+- **Copy button** - Copy the short URL to clipboard
+- **Open button** - Visit the short link in a new tab
+- **Show QR button** - Generate a QR code for mobile sharing
+
+### 2. Metrics Cards
+
+Two side-by-side cards showing key metrics:
+
+**Interactions Card:**
+- **Number** - Total interaction count
+- **Label** - "interactions"
+- **What it means** - Total engagement including all traffic (before bot filtering)
+
+**Total Clicks Card:**
+- **Number** - Verified click count
+- **Label** - "total Clicks"
+- **What it means** - Filtered click count after removing bots and invalid traffic
+
+<Note>
+**Interactions vs Clicks:** The "interactions" count is typically higher because it includes automated bot traffic. "Total clicks" is the more accurate measure of real human engagement.
+</Note>
+
+### 3. Analytics Table
+
+Detailed click-by-click breakdown:
+
+**Table columns:**
+
+| Column | Description | Example |
+|--------|-------------|----------|
+| **Country** | Visitor's country with flag icon | 🇺🇸 United States |
+| **Browser** | Browser name and icon | 🟦 Chrome |
+| **OS** | Operating system and icon | 🍎 macOS |
+| **Date** | Click timestamp (localized) | 2 hours ago |
+
+**Pagination:**
+- **6 clicks per page** - Prevents overflow on mobile
+- **Prev/Next buttons** - Navigate between pages
+- **Page indicator** - Shows current page (e.g., "1 / 5")
+
+## Understanding Analytics Data
+
+### Geographic Tracking
+
+**Country detection:**
+sptfy.in uses IP-based geolocation to determine the visitor's country.
+
+**Data shown:**
+- **Flag icon** - Visual representation using flagcdn.com
+- **Country name** - Full country name (e.g., "United States")
+- **Fallback** - Shows "Unknown" with 🇺🇳 flag if country can't be determined
+
+**Use cases:**
+- Understand where your music is popular
+- Target specific regions for promotion
+- Identify international reach
+
+### Browser Detection
+
+**Detected browsers:**
+- Chrome (🟦 Chrome logo)
+- Firefox (🦊 Firefox logo)
+- Safari (🧭 Safari logo)
+- Edge (🌊 Edge logo)
+- Opera (🔴 Opera logo)
+- Brave (🦁 Brave logo)
+- Mobile browsers (Instagram, Facebook in-app browsers)
+- Others (question mark icon for unknown)
+
+**Parsing:**
+The system uses the `ua-parser-js` library to extract browser name and version from the User-Agent string.
+
+**Display:**
+- Browser name only (e.g., "Chrome" instead of "Chrome 120.0.5993.70")
+- Icon for visual identification
+- Removes "Mobile" suffix for cleaner display
+
+### Operating System Detection
+
+**Detected OS:**
+- Windows (🪟 Windows icon)
+- macOS (🍎 Apple icon)
+- iOS (🍎 Apple icon)
+- Android (🤖 Android icon - green color)
+- Linux (🐧 Linux icon)
+- Others (question mark for unknown)
+
+**Use cases:**
+- Optimize sharing for desktop vs mobile
+- Understand if your audience is on Spotify mobile app or web player
+- Identify platform preferences
+
+### Click Timestamps
+
+**Time display:**
+Timestamps are localized to your browser's timezone and displayed in relative format:
+
+- "2 minutes ago"
+- "1 hour ago"
+- "3 days ago"
+- "Jan 15, 2026" (for older clicks)
+
+**Sorting:**
+Clicks are sorted by **newest first** (most recent at the top).
+
+## Bot Filtering
+
+sptfy.in automatically filters out bot traffic to ensure accurate analytics:
+
+### What Gets Filtered
+
+- **Known bots** - Search engine crawlers (Googlebot, Bingbot, etc.)
+- **Link preview bots** - Social media preview generators (Twitter, Discord, etc.)
+- **Spam bots** - Malicious traffic and scrapers
+- **Invalid traffic** - Duplicate clicks from the same IP within seconds
+
+### How It Works
+
+**Server-side filtering:**
+1. User-Agent analysis - Detects bot signatures
+2. Behavior analysis - Identifies non-human patterns
+3. IP reputation - Checks against known bot IP ranges
+4. Click validation - Removes duplicate/invalid clicks
+
+**Result:**
+- **Interactions** - All traffic (before filtering)
+- **Total Clicks** - Filtered count (real humans only)
+
+<Tip>
+If your "interactions" count is much higher than "total clicks," it means bots or automated tools are accessing your link (usually link preview generators).
+</Tip>
+
+## Privacy & Data Collection
+
+### What We Collect
+
+**Per click:**
+- Country (from IP geolocation)
+- Browser name and version (from User-Agent)
+- Operating system (from User-Agent)
+- Timestamp (UTC)
+
+### What We DON'T Collect
+
+❌ **Personal information** - No names, emails, or user accounts
+❌ **IP addresses** - Not stored after geolocation lookup
+❌ **Device fingerprints** - No tracking across sites
+❌ **Browsing history** - Only the click on your short link
+❌ **Cookies** - No tracking cookies or third-party scripts
+
+<Note>
+**GDPR compliant:** sptfy.in analytics are designed to be privacy-friendly and compliant with GDPR/CCPA regulations. We collect only aggregate, anonymized data necessary for basic analytics.
+</Note>
+
+## Analytics Limitations
+
+### No Historical Data Before Creation
+
+Analytics tracking starts **when the link is created**. Pre-existing links (if any) don't have retroactive data.
+
+### Public Analytics
+
+Anyone with the `/s` URL can view analytics. This is by design for transparency.
+
+**Future feature:** Private analytics for signed-in users (planned).
+
+### No Advanced Metrics (Yet)
+
+Currently not available (but planned for future updates):
+- ❌ Referrer tracking (where clicks came from)
+- ❌ Device type breakdown (desktop vs mobile vs tablet)
+- ❌ Time-based graphs (clicks over time)
+- ❌ Click heatmaps
+- ❌ Conversion tracking
+- ❌ CSV export
+
+<Tip>
+Want advanced analytics? Consider using UTM parameters in your Spotify URLs before shortening, or integrate with your own analytics platform.
+</Tip>
+
+## Use Cases
+
+### For Artists
+
+**Track single releases:**
+```
+Create: artist.sptfy.in/new-single
+Share: On social media, newsletters, etc.
+Analyze: See which countries stream the most
+```
+
+**Monitor playlist placements:**
+```
+Create: playlist.sptfy.in/editorial-mix
+Share: Link to your playlist feature
+Analyze: Track growth and engagement
+```
+
+### For Playlist Curators
+
+**Share playlists:**
+```
+Create: playlist.sptfy.in/workout-vibes
+Share: In fitness communities
+Analyze: See browser usage (mobile vs desktop)
+```
+
+**Promote on social:**
+```
+Create: sptfy.in/chill-beats
+Share: Twitter, Instagram bio, YouTube description
+Analyze: Track which platforms drive the most clicks
+```
+
+### For Marketers
+
+**Campaign tracking:**
+```
+Create: sptfy.in/summer-campaign-2026
+Share: In email campaigns and ads
+Analyze: Monitor click-through rates and geographic performance
+```
+
+**Influencer collaborations:**
+```
+Create: artist.sptfy.in/collab-track
+Share: Give unique link to each influencer
+Analyze: Compare performance by slug
+```
+
+## QR Code Analytics
+
+sptfy.in generates QR codes for easy mobile sharing. Clicks via QR codes are tracked the same way as regular clicks.
+
+**How to use:**
+1. Open analytics page (`/[slug]/s`)
+2. Click **Show QR** button
+3. Download or display the QR code
+4. Scan with mobile device → Redirects to Spotify
+5. Click is recorded in analytics
+
+**QR code benefits:**
+- **Print marketing** - Posters, flyers, business cards
+- **Events** - Concert screens, venue signage
+- **Merch** - Album covers, T-shirts
+- **In-person sharing** - Quick mobile-to-mobile sharing
+
+## Interpreting Your Data
+
+### High Interaction, Low Clicks
+
+**Cause:** Bots or link preview generators
+
+**Fix:** This is normal. Social media platforms fetch link previews, which count as "interactions" but are filtered from "clicks."
+
+### Clicks from Unexpected Countries
+
+**Cause:** VPNs, proxy servers, or international fans
+
+**Note:** IP-based geolocation isn't always perfect. Some users may appear from different countries if using VPNs.
+
+### No Clicks Yet
+
+**Possible reasons:**
+- Link was just created (give it time)
+- Not shared yet (promote your link)
+- Audience isn't clicking (try a more compelling call-to-action)
+
+### Same Browser/OS Repeatedly
+
+**Cause:** Your own testing, or a concentrated audience
+
+**Tip:** Exclude your own IP when testing links (future feature).
+
+## Best Practices
+
+### Naming Conventions
+
+Use descriptive slugs to easily identify analytics later:
+
+```
+✅ Good: artist.sptfy.in/artist-name-tour-2026
+❌ Bad: sptfy.in/a7x9
+```
+
+### Regular Monitoring
+
+Check analytics weekly to:
+- Identify trends
+- Adjust sharing strategy
+- Spot unusual activity
+
+### Compare Links
+
+Create multiple links for the same content to A/B test:
+
+```
+Link A: sptfy.in/playlist-version-a
+Link B: sptfy.in/playlist-version-b
+
+Share in different channels, compare performance
+```
+
+## Troubleshooting
+
+### "No analytics yet"
+
+This means zero clicks have been recorded.
+
+**Fix:** Share your link and wait for traffic.
+
+### Analytics page not loading
+
+**Possible causes:**
+- Invalid slug (link doesn't exist)
+- Network issue
+- Server maintenance
+
+**Fix:** Check the short link works first, then retry analytics.
+
+### Metrics seem low
+
+**Possible reasons:**
+- Bot filtering is working correctly
+- Link hasn't been widely shared
+- Audience clicked but didn't engage (normal for some traffic)
+
+<Note>
+**"Total clicks" is the accurate metric** - Don't worry if "interactions" is much higher. That's bots and link previews being filtered out.
+</Note>
+
+## Future Analytics Features
+
+Planned enhancements (coming soon):
+
+- 📊 **Click charts** - Visual graphs of clicks over time
+- 🔗 **Referrer tracking** - See where clicks came from (Twitter, Instagram, etc.)
+- 📱 **Device breakdown** - Desktop vs mobile vs tablet
+- 📥 **CSV export** - Download analytics data
+- 🔒 **Private analytics** - Option to hide analytics from public
+- 🎯 **UTM parameter support** - Track campaigns with UTM tags
+- 🚫 **IP exclusion** - Filter out your own testing clicks
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Managing Links" icon="table" href="/guides/managing-links">
+    Organize and edit your links in the dashboard
+  </Card>
+  <Card title="Custom Slugs" icon="pen" href="/guides/custom-slugs">
+    Create memorable links for easier analytics tracking
+  </Card>
+  <Card title="Creating Links" icon="scissors" href="/guides/creating-links">
+    Learn the basics of link creation
+  </Card>
+</CardGroup>

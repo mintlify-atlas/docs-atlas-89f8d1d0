@@ -1,0 +1,147 @@
+---
+title: Creating Shortened Links
+description: Learn how to create custom Spotify short links with sptfy.in
+---
+
+## Creating Your First Link
+
+Shortening a Spotify URL with sptfy.in is quick and easy. Follow these steps to create your first link.
+
+### Basic Link Creation
+
+<Steps>
+  <Step title="Get your Spotify URL">
+    Copy any Spotify link from the Spotify app or website. You can shorten:
+    - **Tracks** - Individual songs
+    - **Albums** - Full albums
+    - **Artists** - Artist profiles
+    - **Playlists** - Your playlists or public playlists
+    - **Podcasts/Episodes** - Shows and episodes
+    - **User profiles** - Spotify user pages
+  </Step>
+
+  <Step title="Paste the URL">
+    On the [sptfy.in homepage](https://sptfy.in), paste your Spotify URL in the input field.
+    
+    **Paste Options:**
+    - **Manual paste** - Right-click → Paste or Ctrl+V (Cmd+V on Mac)
+    - **Paste button** - Click the clipboard icon next to the input field
+    - **Auto-extraction** - The system automatically extracts valid Spotify URLs from any text you paste
+  </Step>
+
+  <Step title="Complete verification">
+    For security, you'll see a Cloudflare Turnstile verification widget. In most cases, this validates automatically without any action required.
+    
+    <Note>
+    The verification helps prevent abuse and spam while keeping the service free for everyone.
+    </Note>
+  </Step>
+
+  <Step title="Click 'Short It!'">
+    Once verification is complete, click the **Short It!** button to create your shortened link.
+    
+    The button will show:
+    - **"validating..."** - While verifying with Turnstile
+    - **"loading..."** - While creating your link
+    - **Shield icon** - Verification status (green check = ready)
+  </Step>
+
+  <Step title="Copy your link">
+    Your new short link appears instantly! Use the action buttons to:
+    - **Copy** - Click the copy icon to copy the link to your clipboard
+    - **Open** - Click the external link icon to test your shortened URL
+    - **Show QR** - Generate a QR code for easy mobile sharing
+    - **Show Clicks** - View analytics for your link (see [Analytics guide](/guides/analytics))
+  </Step>
+</Steps>
+
+### Spotify Link Expansion
+
+sptfy.in automatically expands `spotify.link` short URLs to their full `open.spotify.com` format before shortening.
+
+<Tip>
+If you paste a `spotify.link` URL, you'll see a toast notification saying "Link expanded!" as the system resolves it to the full Spotify URL.
+</Tip>
+
+**Why this happens:**
+- Ensures your sptfy.in link points to the permanent Spotify URL
+- Prevents double-shortening issues
+- Provides better analytics and reliability
+
+## URL Validation
+
+sptfy.in only accepts valid Spotify URLs from these domains:
+- `open.spotify.com/*` - Standard Spotify links
+- `spotify.link/*` - Official Spotify short links (auto-expanded)
+
+### What Happens If URL Is Invalid
+
+If you paste a non-Spotify URL, you'll see an error dialog:
+
+**Error: No Spotify URL Found**
+> The clipboard content doesn't contain a valid Spotify URL. Please copy a link from Spotify and try again.
+
+<Warning>
+sptfy.in is designed exclusively for Spotify URLs. Other link shorteners exist for general-purpose URL shortening.
+</Warning>
+
+## Generated vs Custom Slugs
+
+By default, sptfy.in generates a random 4-character slug for your link:
+
+- **Example:** `sptfy.in/a7x9`
+- **Format:** Lowercase letters (a-z) and numbers (0-9)
+- **Length:** Starts at 4 characters, increases automatically if needed
+
+Want a custom slug instead? See the [Custom Slugs guide](/guides/custom-slugs).
+
+## Rate Limits
+
+To keep the service free and prevent abuse, sptfy.in has rate limits:
+
+<Warning>
+**Rate Limit:** If you create too many links too quickly, you'll see:
+
+**Error: Too Many Requests**
+> You've created too many links recently. Please wait a moment and try again.
+
+Wait a few minutes before creating more links.
+</Warning>
+
+## Link Preview
+
+When you paste a Spotify URL, sptfy.in fetches a rich preview showing:
+
+- **Album/track artwork** - Visual thumbnail
+- **Title** - Song name, artist name, or playlist title
+- **Subtitle** - Artist, album info, or description
+- **Type badge** - Content type (track, album, artist, playlist, etc.)
+- **Green checkmark** - Indicates valid Spotify content
+
+**Loading states:**
+- Skeleton animation while fetching preview
+- Preview appears within 1-2 seconds
+- Falls back to music icon if preview fails
+
+## Privacy & Terms
+
+By creating a link, you agree to sptfy.in's [Privacy Policy](https://sptfy.in/about/privacy) and [Terms of Service](https://sptfy.in/about/terms).
+
+Key points:
+- Links are **public** and can be accessed by anyone
+- Analytics data is **anonymized** (see [Analytics guide](/guides/analytics))
+- sptfy.in **does not collect** personal information from link creators (unless you sign in)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Slugs" icon="pen" href="/guides/custom-slugs">
+    Create memorable, branded short links
+  </Card>
+  <Card title="Managing Links" icon="table" href="/guides/managing-links">
+    View and organize your links in the dashboard
+  </Card>
+  <Card title="Analytics" icon="chart-line" href="/guides/analytics">
+    Track clicks and understand your audience
+  </Card>
+</CardGroup>

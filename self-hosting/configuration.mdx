@@ -1,0 +1,331 @@
+---
+title: 'Configuration'
+description: 'Environment variables and configuration options for sptfy.in'
+---
+
+## Overview
+
+Sptfy.in requires configuration in two places:
+1. **Backend (VPS)**: `.env` file for PocketBase environment variables
+2. **Frontend (Cloudflare Pages)**: Build environment variables
+
+## Backend Configuration (PocketBase)
+
+### Environment Variables
+
+The `.env` file in your `~/pb-docker` directory configures the PocketBase backend.
+
+#### Required Variables
+
+<CodeGroup>
+```bash Production .env
+# Cloudflare Turnstile secret key (REQUIRED)
+CF_SECRET_KEY=your_cloudflare_turnstile_secret_here
+```
+
+```bash Development .env
+# For local development, use Turnstile test keys (always pass)
+CF_SECRET_KEY=1x0000000000000000000000000000000AA
+```
+</CodeGroup>
+
+<Warning>
+**Production secret**: Get this from [Cloudflare Dashboard](https://dash.cloudflare.com) → Turnstile → Your Site → Secret Key
+
+**Development secret**: The test key `1x0000000000000000000000000000000AA` always passes validation (useful for local dev).
+</Warning>
+
+#### Optional Maintenance Mode Variables
+
+These are **frontend** environment variables (set in Cloudflare Pages, not in `.env`):
+
+```bash
+# Maintenance mode settings
+PUBLIC_MAINTENANCE_MODE=false
+PUBLIC_MAINTENANCE_TYPE=migration
+PUBLIC_MAINTENANCE_NOTE=link creation and dashboard edits may be temporarily unavailable.
+PUBLIC_MAINTENANCE_SCHEDULED=2026-02-25T10:00:00Z
+PUBLIC_MAINTENANCE_END=2026-02-25T11:00:00Z
+PUBLIC_STATUS_PAGE_URL=https://status.sptfy.in
+```
+
+**How it works:**
+- `PUBLIC_MAINTENANCE_MODE=true` → Force maintenance mode ON
+- `PUBLIC_MAINTENANCE_MODE=false` → Follow scheduled window (auto-activates between SCHEDULED and END)
+- `PUBLIC_MAINTENANCE_MODE=off` → Force maintenance mode OFF
+
+### Docker Compose Configuration
+
+The `docker-compose.yml` file defines the PocketBase container setup.
+
+<CodeGroup>
+```yaml docker-compose.yml
+services:
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:0.23.12
+    tty: true
+    container_name: pocketbase
+    restart: unless-stopped
+    ports:
+      - '8091:8090'
+    volumes:
+      - ./pb_data:/pb_data
+      - ./pb_public:/pb_public
+      - ./pocketbase/pb_hooks:/pb_hooks
+      - ./pocketbase/pb_migrations:/pb_migrations
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+      interval: 60s
+      timeout: 10s
+      retries: 2
+    environment:
+      TZ: 'Asia/Jakarta'
+      CF_SECRET_KEY: '${CF_SECRET_KEY}'
+```
+</CodeGroup>
+
+#### Key Configuration Options
+
+<ResponseField name="ports" type="string">
+  **8091:8090** - Maps host port 8091 to container port 8090. Change if port 8091 is already in use.
+</ResponseField>
+
+<ResponseField name="volumes" type="array">
+  Persistent data directories:
+  - `./pb_data` - Database files (SQLite)
+  - `./pb_public` - Public file storage
+  - `./pocketbase/pb_hooks` - Custom API hooks (JavaScript)
+  - `./pocketbase/pb_migrations` - Database migrations
+</ResponseField>
+
+<ResponseField name="healthcheck" type="object">
+  Checks `/api/health` every 60 seconds. Container marked unhealthy after 2 failed retries.
+</ResponseField>
+
+<ResponseField name="TZ" type="string" default="Asia/Jakarta">
+  Timezone for container. Change to your preferred timezone (e.g., `America/New_York`, `Europe/London`).
+</ResponseField>
+
+<ResponseField name="CF_SECRET_KEY" type="string" required>
+  Cloudflare Turnstile secret key (loaded from `.env` file).
+</ResponseField>
+
+### Changing the Port
+
+If port 8091 conflicts with another service:
+
+1. Edit `docker-compose.yml`:
+   ```yaml
+   ports:
+     - '8092:8090'  # Use port 8092 instead
+   ```
+
+2. Restart the container:
+   ```bash
+   docker compose down
+   docker compose up -d
+   ```
+
+3. Update your Nginx reverse proxy to use the new port (see [Deployment](/self-hosting/deployment)).
+
+### Changing the Timezone
+
+1. Edit `docker-compose.yml`:
+   ```yaml
+   environment:
+     TZ: 'America/New_York'  # Your timezone
+   ```
+
+2. Restart the container:
+   ```bash
+   docker compose restart
+   ```
+
+Find your timezone: [List of tz database time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+
+## Frontend Configuration (Cloudflare Pages)
+
+### Required Environment Variables
+
+Set these in Cloudflare Pages → Your Project → Settings → Environment Variables.
+
+<CodeGroup>
+```bash Production
+# Cloudflare Turnstile site key (public)
+PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key
+
+# PocketBase API URL (your VPS backend)
+PUBLIC_POCKETBASE_URL=https://pbbase.sptfy.in
+```
+
+```bash Preview (optional)
+# For preview deployments, you can use the same values
+# or point to a staging PocketBase instance
+PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key
+PUBLIC_POCKETBASE_URL=https://staging.pbbase.sptfy.in
+```
+</CodeGroup>
+
+<ResponseField name="PUBLIC_TURNSTILE_SITE_KEY" type="string" required>
+  Get this from Cloudflare Dashboard → Turnstile → Your Site → Site Key. This is the **public** key (safe to expose).
+</ResponseField>
+
+<ResponseField name="PUBLIC_POCKETBASE_URL" type="string" required>
+  The public URL of your PocketBase instance. Must be HTTPS in production (set up via Nginx reverse proxy).
+</ResponseField>
+
+### Build Configuration
+
+Cloudflare Pages auto-detects SvelteKit. Default settings work, but you can customize:
+
+<CodeGroup>
+```yaml cloudflare-pages.yml
+# Build command
+npm run build
+
+# Build output directory
+.svelte-kit/cloudflare
+
+# Node.js version
+20
+
+# Install command
+npm install
+```
+</CodeGroup>
+
+<Note>
+Sptfy.in uses **pnpm** for package management. If Cloudflare Pages doesn't auto-detect pnpm, you may need to:
+1. Add a `.nvmrc` file with `20` (Node.js version)
+2. Use build command: `npx pnpm install && npx pnpm build`
+</Note>
+
+## PocketBase Admin Configuration
+
+### Admin Panel Access
+
+Access the PocketBase admin panel at:
+- **Local development**: `http://127.0.0.1:8090/_/`
+- **Production**: `https://pbbase.sptfy.in/_/`
+
+<Warning>
+**Security**: Restrict admin panel access in production. Use Nginx to:
+- Require IP whitelist for `/_/` path
+- Use strong admin password (16+ characters)
+- Enable 2FA if PocketBase supports it in your version
+</Warning>
+
+### Collections Configuration
+
+Key collections in the database:
+- `users` - User accounts (OAuth via Spotify)
+- `random_short` - Short links (both random and custom slugs)
+- `analytics` - Click analytics and tracking
+- `blocks` - Blocked users/IPs
+
+See [Database Setup](/self-hosting/database-setup) for detailed collection schemas.
+
+### API Rules
+
+PocketBase uses collection-level API rules. Important settings:
+
+- **List/View Rules**: Control who can read records
+- **Create Rules**: Control who can create records
+- **Update Rules**: Control who can modify records
+- **Delete Rules**: Control who can delete records
+
+<Note>
+The schema is defined in `pocketbase/pb_migrations/`. Migrations run automatically on container start.
+</Note>
+
+## Backup Configuration
+
+### PocketBase Built-in Backups
+
+PocketBase supports automated backups to S3-compatible storage.
+
+Production setup uses **Cloudflare R2** for backups:
+
+1. Go to PocketBase Admin → Settings → Backups
+2. Configure S3 settings:
+   - **Endpoint**: `https://<account-id>.r2.cloudflarestorage.com`
+   - **Bucket**: Your R2 bucket name
+   - **Region**: `auto`
+   - **Access Key**: R2 access key ID
+   - **Secret Key**: R2 secret access key
+3. Set backup schedule (e.g., daily at 3 AM)
+
+<Warning>
+Test your backup restoration process regularly. A backup you can't restore is useless.
+</Warning>
+
+### Manual Backups
+
+Create a manual backup:
+
+```bash
+# Stop the container
+cd ~/pb-docker
+docker compose down
+
+# Backup pb_data directory
+tar -czf pb_data_backup_$(date +%Y%m%d).tar.gz pb_data/
+
+# Restart the container
+docker compose up -d
+```
+
+Restore from backup:
+
+```bash
+# Stop the container
+docker compose down
+
+# Remove current data
+rm -rf pb_data/
+
+# Extract backup
+tar -xzf pb_data_backup_20260302.tar.gz
+
+# Restart container
+docker compose up -d
+```
+
+## Security Best Practices
+
+<Steps>
+  <Step title="Secure your .env file">
+    ```bash
+    # Set proper permissions (only owner can read)
+    chmod 600 ~/pb-docker/.env
+    ```
+  </Step>
+  
+  <Step title="Use strong secrets">
+    - Use production Cloudflare Turnstile keys (not test keys)
+    - Set a strong PocketBase admin password
+    - Rotate secrets periodically
+  </Step>
+  
+  <Step title="Restrict admin access">
+    Configure Nginx to whitelist IPs for `/_/` path (admin panel)
+  </Step>
+  
+  <Step title="Enable HTTPS">
+    Use Nginx with Let's Encrypt SSL certificates (see [Deployment](/self-hosting/deployment))
+  </Step>
+  
+  <Step title="Monitor logs">
+    ```bash
+    # Check container logs regularly
+    docker compose logs -f --tail=100
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+- [Database Setup](/self-hosting/database-setup) - Configure PocketBase collections and data
+- [Deployment](/self-hosting/deployment) - Set up Nginx reverse proxy and Cloudflare Pages

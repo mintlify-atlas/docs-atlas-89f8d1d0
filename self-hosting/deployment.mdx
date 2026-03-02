@@ -1,0 +1,678 @@
+---
+title: 'Deployment'
+description: 'Deploy sptfy.in to production with VPS and Cloudflare Pages'
+---
+
+## Overview
+
+Sptfy.in uses a **split-stack architecture**:
+
+- **Backend**: PocketBase in Docker on a VPS, reverse proxied via Nginx
+- **Frontend**: SvelteKit app deployed on Cloudflare Pages
+
+Both components auto-deploy when you push to the `main` branch:
+- **Backend**: GitHub Actions → VPS
+- **Frontend**: Cloudflare Pages auto-deploy
+
+## Architecture Diagram
+
+```
+User → Cloudflare Pages (Frontend)
+          ↓
+       HTTPS
+          ↓
+     Your Domain (Nginx)
+          ↓
+       localhost:8091
+          ↓
+   PocketBase (Docker)
+```
+
+## Backend Deployment (VPS)
+
+### Prerequisites
+
+- VPS with Docker installed (see [Installation](/self-hosting/installation))
+- Domain name configured in DNS
+- SSH access to VPS
+- GitHub repository (for automated deployments)
+
+### Nginx Reverse Proxy Setup
+
+Nginx exposes PocketBase (running on `localhost:8091`) to the internet via HTTPS.
+
+<Steps>
+  <Step title="Install Nginx and Certbot">
+    ```bash
+    sudo apt update
+    sudo apt install nginx certbot python3-certbot-nginx -y
+    ```
+  </Step>
+
+  <Step title="Create Nginx configuration">
+    Create a new site configuration:
+    
+    ```bash
+    sudo nano /etc/nginx/sites-available/pocketbase
+    ```
+    
+    Add the following configuration:
+    
+    ```nginx
+    server {
+        listen 80;
+        server_name pbbase.yourdomain.com;
+
+        # Redirect HTTP to HTTPS
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl http2;
+        server_name pbbase.yourdomain.com;
+
+        # SSL certificates (will be added by Certbot)
+        ssl_certificate /etc/letsencrypt/live/pbbase.yourdomain.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/pbbase.yourdomain.com/privkey.pem;
+
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+
+        # Proxy to PocketBase
+        location / {
+            proxy_pass http://127.0.0.1:8091;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # WebSocket support (for realtime subscriptions)
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+
+        # Restrict admin panel access (optional but recommended)
+        location /_/ {
+            # Allow only from your IP (replace with your actual IP)
+            allow 203.0.113.0/24;
+            deny all;
+
+            proxy_pass http://127.0.0.1:8091;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+    
+    <Warning>
+    Replace `pbbase.yourdomain.com` with your actual domain.
+    
+    Replace `203.0.113.0/24` with your actual IP or IP range for admin access.
+    </Warning>
+  </Step>
+
+  <Step title="Enable the site">
+    ```bash
+    # Create symlink to enable site
+    sudo ln -s /etc/nginx/sites-available/pocketbase /etc/nginx/sites-enabled/
+
+    # Test configuration
+    sudo nginx -t
+
+    # Reload Nginx
+    sudo systemctl reload nginx
+    ```
+  </Step>
+
+  <Step title="Configure DNS">
+    Add an A record pointing to your VPS IP:
+    
+    ```
+    Type: A
+    Name: pbbase
+    Value: YOUR_VPS_IP_ADDRESS
+    TTL: 3600 (or Auto)
+    ```
+    
+    Wait for DNS propagation (1-5 minutes).
+  </Step>
+
+  <Step title="Obtain SSL certificate">
+    ```bash
+    # Get SSL certificate from Let's Encrypt
+    sudo certbot --nginx -d pbbase.yourdomain.com
+    ```
+    
+    Follow the prompts:
+    - Enter your email
+    - Agree to terms of service
+    - Choose whether to redirect HTTP to HTTPS (recommended: Yes)
+    
+    Certbot will automatically:
+    - Obtain the certificate
+    - Update Nginx configuration
+    - Set up auto-renewal
+  </Step>
+
+  <Step title="Verify deployment">
+    Test the backend is accessible:
+    
+    ```bash
+    curl https://pbbase.yourdomain.com/api/health
+    ```
+    
+    Expected response:
+    ```json
+    {"code":200,"message":"API is healthy.","data":{}}
+    ```
+  </Step>
+</Steps>
+
+### Automated Deployment with GitHub Actions
+
+The repository includes a GitHub Actions workflow that auto-deploys PocketBase to your VPS on push to `main`.
+
+<Steps>
+  <Step title="Add GitHub Secrets">
+    Go to your GitHub repository → Settings → Secrets and variables → Actions → New repository secret.
+    
+    Add these secrets:
+    
+    | Secret Name | Description | Example |
+    |------------|-------------|----------|
+    | `VPS_HOST` | VPS IP or hostname | `203.0.113.50` |
+    | `VPS_USER` | SSH username | `ubuntu` |
+    | `VPS_SSH_KEY` | SSH private key | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+  </Step>
+
+  <Step title="Generate SSH key (if needed)">
+    On your local machine:
+    
+    ```bash
+    # Generate new SSH key pair
+    ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_actions
+    
+    # Display private key (copy this to VPS_SSH_KEY secret)
+    cat ~/.ssh/github_actions
+    
+    # Display public key (add this to VPS authorized_keys)
+    cat ~/.ssh/github_actions.pub
+    ```
+    
+    On your VPS:
+    ```bash
+    # Add public key to authorized_keys
+    echo "YOUR_PUBLIC_KEY" >> ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+    ```
+  </Step>
+
+  <Step title="Verify workflow file">
+    The workflow is at `.github/workflows/deploy.yml`:
+    
+    ```yaml
+    name: Deploy PocketBase
+
+    on:
+      push:
+        branches: [main]
+        paths:
+          - 'pocketbase/pb_hooks/**'
+          - 'pocketbase/pb_migrations/**'
+          - 'docker-compose.yml'
+      workflow_dispatch: # Manual trigger
+
+    jobs:
+      deploy:
+        name: Deploy to VPS
+        runs-on: ubuntu-latest
+        steps:
+          - name: Deploy via SSH
+            uses: appleboy/ssh-action@v1.0.3
+            with:
+              host: ${{ secrets.VPS_HOST }}
+              username: ${{ secrets.VPS_USER }}
+              key: ${{ secrets.VPS_SSH_KEY }}
+              script: |
+                cd ~/pb-docker
+                git pull origin main
+                docker compose up -d
+                sleep 10
+                curl -sf http://localhost:8091/api/health || exit 1
+    ```
+    
+    The workflow triggers on:
+    - Push to `main` when PocketBase files change
+    - Manual trigger via GitHub Actions UI
+  </Step>
+
+  <Step title="Test automated deployment">
+    1. Make a change to a file in `pocketbase/pb_hooks/`
+    2. Commit and push to `main`:
+       ```bash
+       git add pocketbase/pb_hooks/main.pb.js
+       git commit -m "test: trigger deployment"
+       git push origin main
+       ```
+    3. Go to GitHub → Actions tab
+    4. Watch the "Deploy PocketBase" workflow run
+    5. Verify deployment succeeded:
+       ```bash
+       curl https://pbbase.yourdomain.com/api/health
+       ```
+  </Step>
+</Steps>
+
+### Manual Deployment (Without GitHub Actions)
+
+If you prefer manual deployments:
+
+```bash
+# SSH to VPS
+ssh user@your-vps
+
+# Pull latest changes
+cd ~/pb-docker
+git pull origin main
+
+# Restart PocketBase
+docker compose down
+docker compose up -d
+
+# Verify health
+sleep 10
+curl http://localhost:8091/api/health
+```
+
+## Frontend Deployment (Cloudflare Pages)
+
+Cloudflare Pages auto-builds and deploys the SvelteKit frontend on every push to `main`.
+
+<Steps>
+  <Step title="Create Cloudflare Pages project">
+    1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → Pages
+    2. Click **Create a project**
+    3. Connect to your GitHub repository
+    4. Select the repository (e.g., `yourusername/sptfyin`)
+    5. Configure build settings:
+       - **Production branch**: `main`
+       - **Build command**: `npm run build` (or `npx pnpm install && npx pnpm build`)
+       - **Build output directory**: `.svelte-kit/cloudflare`
+       - **Root directory**: `/` (leave empty)
+  </Step>
+
+  <Step title="Set environment variables">
+    In the Cloudflare Pages project → Settings → Environment variables, add:
+    
+    **Production variables**:
+    ```bash
+    PUBLIC_POCKETBASE_URL=https://pbbase.yourdomain.com
+    PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key
+    ```
+    
+    **Preview variables** (optional, for preview deployments):
+    ```bash
+    PUBLIC_POCKETBASE_URL=https://pbbase.yourdomain.com
+    PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key
+    ```
+    
+    <Note>
+    Get `PUBLIC_TURNSTILE_SITE_KEY` from Cloudflare Dashboard → Turnstile → Your Site → Site Key.
+    </Note>
+  </Step>
+
+  <Step title="Configure custom domain (optional)">
+    1. Go to project Settings → Custom domains
+    2. Add your domain: `sptfy.in`
+    3. Cloudflare will automatically configure DNS
+    4. Wait for SSL certificate provisioning (1-5 minutes)
+  </Step>
+
+  <Step title="Trigger initial deployment">
+    Push to `main` to trigger deployment:
+    
+    ```bash
+    git push origin main
+    ```
+    
+    Monitor the build:
+    1. Go to Cloudflare Pages → Your Project → Deployments
+    2. Watch the build log
+    3. Once completed, visit your site URL
+  </Step>
+
+  <Step title="Verify deployment">
+    Open your site in a browser:
+    ```
+    https://sptfy.in
+    ```
+    
+    Test creating a short link to verify backend connectivity.
+  </Step>
+</Steps>
+
+### Frontend Build Configuration
+
+The SvelteKit app is configured for Cloudflare Pages via `svelte.config.js`:
+
+```javascript
+import cloudflare from '@sveltejs/adapter-cloudflare';
+
+const config = {
+  kit: {
+    adapter: cloudflare(),
+    csrf: {
+      checkOrigin: true
+    }
+  }
+};
+```
+
+<Note>
+Cloudflare Pages automatically detects SvelteKit and uses the correct build command. No additional configuration needed.
+</Note>
+
+## Deployment Workflow
+
+### Full Stack Deployment
+
+When you push to `main`, both components deploy:
+
+```mermaid
+graph LR
+    A[Push to main] --> B[GitHub Actions]
+    A --> C[Cloudflare Pages]
+    B --> D[Deploy PocketBase to VPS]
+    C --> E[Deploy SvelteKit to Pages]
+    D --> F[Health check]
+    E --> G[Live]
+```
+
+### Deployment Triggers
+
+**Backend (PocketBase)**:
+- Push to `main` with changes in:
+  - `pocketbase/pb_hooks/**`
+  - `pocketbase/pb_migrations/**`
+  - `docker-compose.yml`
+- Manual trigger via GitHub Actions UI
+
+**Frontend (SvelteKit)**:
+- Any push to `main`
+- Push to any branch (creates preview deployment)
+
+### Rollback Procedures
+
+#### Frontend Rollback
+
+1. Go to Cloudflare Pages → Your Project → Deployments
+2. Find the previous working deployment
+3. Click **...** → **Rollback to this deployment**
+4. Instant rollback (no downtime)
+
+#### Backend Rollback
+
+<Warning>
+**Prefer forward-fix over rollback** due to database migration constraints. Rollbacks can break migrations.
+</Warning>
+
+If you must rollback:
+
+```bash
+# SSH to VPS
+ssh user@your-vps
+
+cd ~/pb-docker
+
+# Stop container
+docker compose down
+
+# Restore database from backup (if schema changed)
+rm -rf pb_data
+tar -xzf pb_data_backup_YYYYMMDD.tar.gz
+
+# Checkout previous commit
+git log --oneline  # Find commit hash
+git checkout abc123  # Replace with actual commit
+
+# Restart container
+docker compose up -d
+
+# Verify health
+curl http://localhost:8091/api/health
+```
+
+## Monitoring and Health Checks
+
+### PocketBase Health Check
+
+PocketBase exposes a health endpoint:
+
+```bash
+curl https://pbbase.yourdomain.com/api/health
+```
+
+Expected response:
+```json
+{"code":200,"message":"API is healthy.","data":{}}
+```
+
+### Docker Health Check
+
+The `docker-compose.yml` includes a health check:
+
+```yaml
+healthcheck:
+  test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+  interval: 60s
+  timeout: 10s
+  retries: 2
+```
+
+Check container health:
+```bash
+docker compose ps
+```
+
+Look for `(healthy)` status.
+
+### Status Page (Optional)
+
+The production instance uses **BetterStack** for uptime monitoring:
+
+- Public status page: `https://status.sptfy.in`
+- Monitors both frontend and backend
+- Auto-alerts on downtime
+
+<Note>
+You can use any monitoring service (UptimeRobot, Pingdom, etc.). Monitor:
+- Frontend: `https://sptfy.in`
+- Backend: `https://pbbase.yourdomain.com/api/health`
+</Note>
+
+## Troubleshooting
+
+### Backend Issues
+
+#### 502 Bad Gateway
+
+**Cause**: Nginx can't reach PocketBase.
+
+**Solution**:
+```bash
+# Check if PocketBase is running
+docker compose ps
+
+# Check if PocketBase is listening on 8091
+sudo netstat -tlnp | grep 8091
+
+# Check Docker logs
+docker compose logs pocketbase
+
+# Restart container
+docker compose restart
+```
+
+#### SSL Certificate Issues
+
+**Cause**: Let's Encrypt certificate expired or failed to renew.
+
+**Solution**:
+```bash
+# Test auto-renewal
+sudo certbot renew --dry-run
+
+# Force renewal
+sudo certbot renew --force-renewal
+
+# Reload Nginx
+sudo systemctl reload nginx
+```
+
+#### GitHub Actions Deployment Failed
+
+**Cause**: SSH connection failed or health check timeout.
+
+**Solution**:
+1. Check GitHub Actions logs for error details
+2. Verify VPS is accessible:
+   ```bash
+   ssh user@your-vps
+   ```
+3. Verify secrets are correct (VPS_HOST, VPS_USER, VPS_SSH_KEY)
+4. Manually deploy and check for errors:
+   ```bash
+   cd ~/pb-docker
+   git pull origin main
+   docker compose up -d
+   ```
+
+### Frontend Issues
+
+#### Build Failed on Cloudflare Pages
+
+**Cause**: Dependency installation or build error.
+
+**Solution**:
+1. Check build logs in Cloudflare Pages dashboard
+2. Verify `package.json` dependencies are correct
+3. Test build locally:
+   ```bash
+   pnpm install
+   pnpm build
+   ```
+4. If using pnpm, ensure Cloudflare Pages uses the correct install command:
+   ```
+   npx pnpm install && npx pnpm build
+   ```
+
+#### Environment Variables Not Working
+
+**Cause**: Variables not set or incorrect scope (Production vs Preview).
+
+**Solution**:
+1. Go to Cloudflare Pages → Settings → Environment variables
+2. Verify variables are set for the correct environment
+3. Re-deploy to apply changes:
+   ```bash
+   git commit --allow-empty -m "trigger redeploy"
+   git push origin main
+   ```
+
+#### CORS Errors
+
+**Cause**: Frontend can't connect to backend due to CORS policy.
+
+**Solution**:
+1. Verify `PUBLIC_POCKETBASE_URL` is set correctly in Cloudflare Pages
+2. Check PocketBase CORS settings in Admin UI → Settings → CORS
+3. Add your frontend domain to allowed origins:
+   ```
+   https://sptfy.in
+   https://*.pages.dev
+   ```
+
+## Security Checklist
+
+<Steps>
+  <Step title="Secure PocketBase admin">
+    - [ ] Restrict admin panel access via Nginx IP whitelist
+    - [ ] Use strong admin password (16+ characters)
+    - [ ] Change default admin email from example domain
+  </Step>
+  
+  <Step title="Secure VPS">
+    - [ ] Disable root SSH login
+    - [ ] Use SSH keys (disable password auth)
+    - [ ] Enable UFW firewall (allow 22, 80, 443)
+    - [ ] Keep system updated (`sudo apt update && sudo apt upgrade`)
+  </Step>
+  
+  <Step title="Secure secrets">
+    - [ ] Use production Cloudflare Turnstile keys (not test keys)
+    - [ ] Set proper `.env` file permissions (`chmod 600`)
+    - [ ] Store GitHub secrets securely (VPS_SSH_KEY)
+    - [ ] Rotate secrets periodically
+  </Step>
+  
+  <Step title="Enable HTTPS">
+    - [ ] SSL certificate for PocketBase (Let's Encrypt)
+    - [ ] SSL certificate for frontend (Cloudflare auto-provisions)
+    - [ ] Redirect HTTP to HTTPS in Nginx
+  </Step>
+  
+  <Step title="Monitor and backup">
+    - [ ] Set up uptime monitoring (BetterStack, UptimeRobot, etc.)
+    - [ ] Enable PocketBase automated backups to R2/S3
+    - [ ] Test backup restoration monthly
+    - [ ] Monitor Docker logs for errors
+  </Step>
+</Steps>
+
+## Performance Optimization
+
+### Backend Optimization
+
+1. **Enable Nginx caching** for static assets:
+   ```nginx
+   location /api/files/ {
+       proxy_pass http://127.0.0.1:8091;
+       proxy_cache_valid 200 1h;
+   }
+   ```
+
+2. **Optimize PocketBase indexes**:
+   - Add indexes on frequently queried fields (e.g., `slug`, `user`)
+   - Review slow query logs in PocketBase admin
+
+3. **Increase VPS resources** if needed:
+   - Monitor CPU/RAM usage: `htop`
+   - Upgrade VPS plan if consistently over 80% utilization
+
+### Frontend Optimization
+
+Cloudflare Pages provides:
+- Global CDN (automatic)
+- HTTP/3 support (automatic)
+- Auto-minification (automatic)
+- Image optimization (configure in Cloudflare dashboard)
+
+## Next Steps
+
+You now have a fully deployed sptfy.in instance!
+
+**Recommended next steps**:
+1. Set up uptime monitoring
+2. Configure automated backups
+3. Customize the frontend (logo, colors, domain)
+4. Add custom analytics (Plausible, Umami, etc.)
+
+**Learn more**:
+- [Configuration](/self-hosting/configuration) - Advanced configuration options
+- [Database Setup](/self-hosting/database-setup) - Manage PocketBase collections
+- [Installation](/self-hosting/installation) - Review installation steps

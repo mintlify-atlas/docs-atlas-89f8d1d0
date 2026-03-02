@@ -1,0 +1,287 @@
+---
+title: Using Custom Slugs
+description: Create memorable, branded short links with custom slugs on sptfy.in
+---
+
+## What Are Custom Slugs?
+
+A **slug** is the unique identifier in your short link. Instead of random characters, you can create custom, meaningful slugs:
+
+- **Random slug:** `sptfy.in/a7x9`
+- **Custom slug:** `sptfy.in/summer-vibes-2026`
+
+### Benefits of Custom Slugs
+
+- **Memorable** - Easier for your audience to remember and type
+- **Branded** - Include your brand name or campaign identifier
+- **Descriptive** - Hint at the content before clicking
+- **Professional** - Looks more polished than random characters
+- **SEO-friendly** - Better for sharing and discoverability
+
+## How to Create a Custom Slug
+
+<Steps>
+  <Step title="Open customization options">
+    On the [sptfy.in homepage](https://sptfy.in), click the **"customize (optional)"** row to expand advanced options.
+    
+    <Tip>
+    The expand/collapse animation uses a smooth chevron icon. Click anywhere on the row or the chevron to toggle.
+    </Tip>
+  </Step>
+
+  <Step title="Enter your custom slug">
+    In the expanded section, you'll see two fields:
+    - **Domain dropdown** - Choose your subdomain (see [Subdomains](#choosing-a-subdomain))
+    - **Custom slug input** - Enter your desired slug here
+    
+    Type your preferred slug in the input field. As you type, the system automatically:
+    - Converts to lowercase
+    - Replaces invalid characters with hyphens
+    - Removes consecutive hyphens
+    - Trims leading/trailing hyphens
+  </Step>
+
+  <Step title="Wait for availability check">
+    The system checks slug availability in real-time as you type. You'll see status indicators below the input:
+    
+    **Status colors:**
+    - 🟡 **Yellow border** - "Checking availability..."
+    - 🟢 **Green border** - "✓ Available"
+    - 🔴 **Red border** - "Slug already taken" or validation error
+  </Step>
+
+  <Step title="Create your link">
+    Once you see the green "✓ Available" indicator, paste your Spotify URL and click **"Short It!"** to create your custom link.
+  </Step>
+</Steps>
+
+## Slug Validation Rules
+
+Custom slugs must follow these rules:
+
+### Minimum Length
+
+**4 characters minimum**
+
+<Warning>
+**Error: Too Short**
+
+Slugs must be at least 4 characters long.
+
+Example: `abc` ❌ → `abcd` ✅
+</Warning>
+
+### Maximum Length
+
+**80 characters maximum**
+
+While the system allows up to 80 characters, shorter slugs are recommended for sharing:
+- **Optimal:** 4-20 characters
+- **Maximum:** 80 characters
+
+### Allowed Characters
+
+Only lowercase letters, numbers, hyphens, and underscores:
+
+- ✅ **Allowed:** `a-z`, `0-9`, `-`, `_`
+- ❌ **Not allowed:** Uppercase, spaces, special characters (!, @, #, etc.)
+
+**Auto-sanitization:**
+The system automatically cleans your input:
+
+| You type | Auto-converted to |
+|----------|------------------|
+| `My Playlist!` | `my-playlist` |
+| `Summer__2026` | `summer-2026` |
+| `--trending--` | `trending` |
+
+<Tip>
+Hyphens (`-`) are recommended over underscores (`_`) for better readability:
+- Better: `summer-vibes-2026`
+- Works: `summer_vibes_2026`
+</Tip>
+
+### Reserved Slugs
+
+Certain slugs are reserved for sptfy.in system routes:
+
+**Protected routes:**
+- `recent` - Recent links page
+- `top` - Top links leaderboard  
+- `about` - About pages
+- `terms` - Terms of service
+- `privacy` - Privacy policy
+- `login` - Authentication
+- `dash` - Dashboard
+- `admin` - Admin panel
+- `api` - API routes
+- `debug` - Debug tools
+
+<Warning>
+**Error: Reserved Slug**
+
+This slug is reserved for system use. Please choose a different one.
+</Warning>
+
+## Real-Time Availability Check
+
+sptfy.in checks slug availability **as you type** using a debounced API call:
+
+**How it works:**
+1. You type a slug → System waits 350ms
+2. If you stop typing → Checks availability with database
+3. Shows result → Green (available), red (taken), or yellow (checking)
+
+**Visual feedback:**
+
+<CodeGroup>
+```text Checking (Yellow)
+🟡 "Checking availability..."
+```
+
+```text Available (Green)  
+🟢 "✓ Available"
+```
+
+```text Taken (Red)
+🔴 "Slug already taken"
+```
+
+```text Reserved (Red)
+🔴 "This slug is reserved for system routes"
+```
+
+```text Check Failed (Yellow)
+🟡 "Availability check failed - try again"
+```
+</CodeGroup>
+
+<Note>
+The "Short It!" button is **disabled** while checking availability or if the slug is invalid/taken. This prevents accidental duplicate creation.
+</Note>
+
+## Choosing a Subdomain
+
+sptfy.in offers multiple subdomains to categorize your content:
+
+### Available Subdomains
+
+| Subdomain | Best for | Example |
+|-----------|----------|----------|
+| **sptfy.in** | General use (default) | `sptfy.in/my-slug` |
+| **artist.sptfy.in** | Artist profiles | `artist.sptfy.in/taylor-swift` |
+| **profile.sptfy.in** | User profiles | `profile.sptfy.in/john-doe` |
+| **playlist.sptfy.in** | Playlists | `playlist.sptfy.in/workout-mix` |
+| **track.sptfy.in** | Individual tracks | `track.sptfy.in/hit-song` |
+
+<Tip>
+**Pro tip:** Choose a subdomain that matches your content type for better organization and professionalism.
+
+Example: Sharing an artist? Use `artist.sptfy.in/artist-name` instead of generic `sptfy.in/artist-name`.
+</Tip>
+
+### Coming Soon
+
+These subdomains are planned but not yet active:
+- **album.sptfy.in** - For albums
+
+## URL Preview with Custom Slug
+
+As you type a custom slug, the **URL preview** card updates in real-time to show how your final link will look:
+
+**Preview shows:**
+```
+[selected-subdomain].sptfy.in/your-custom-slug
+```
+
+**Example flow:**
+1. Default: `sptfy.in/****` (pre-generated random slug)
+2. Select `playlist.sptfy.in`: `playlist.sptfy.in/****`
+3. Type `summer-vibes`: `playlist.sptfy.in/summer-vibes`
+4. Final: `playlist.sptfy.in/summer-vibes` ✅
+
+## Custom Slugs in the Dashboard
+
+If you're signed in, you can also create custom slugs from the [Dashboard](/guides/managing-links):
+
+1. Click **+ Create New Link** button
+2. Expand customization options
+3. Enter custom slug (same validation rules apply)
+4. Real-time availability check works here too
+
+**Editing existing links:**
+You can change the slug of existing links in the dashboard. See [Managing Links guide](/guides/managing-links#editing-links).
+
+## Best Practices
+
+### Do's ✅
+
+- **Keep it short** - Aim for 4-15 characters when possible
+- **Use hyphens** - Separate words with hyphens for readability
+- **Be descriptive** - Hint at the content (e.g., `chill-morning-playlist`)
+- **Include context** - Add dates, campaigns, or events (e.g., `concert-2026`)
+- **Check availability first** - Wait for the green ✓ before submitting
+
+### Don'ts ❌
+
+- **Don't use spaces** - They'll be converted to hyphens anyway
+- **Avoid special characters** - Only `a-z`, `0-9`, `-`, `_` are allowed
+- **Don't use reserved words** - Check the [reserved list](#reserved-slugs)
+- **Avoid offensive content** - Keep it professional and appropriate
+- **Don't make it too long** - Long slugs defeat the purpose of shortening
+
+## Examples
+
+### Good Custom Slugs
+
+```
+✅ sptfy.in/workout-2026
+✅ playlist.sptfy.in/road-trip
+✅ artist.sptfy.in/indie-artist  
+✅ track.sptfy.in/new-single
+✅ sptfy.in/podcast-ep42
+```
+
+### Bad Custom Slugs
+
+```
+❌ sptfy.in/abc          (too short - min 4 chars)
+❌ sptfy.in/My Playlist! (spaces and special chars)
+❌ sptfy.in/recent       (reserved system route)
+❌ sptfy.in/admin        (reserved system route)
+```
+
+## Troubleshooting
+
+### "Slug already taken"
+
+Someone else already created a link with this slug. Try:
+- Adding a number: `playlist-2026` → `playlist-2026-v2`
+- Adding your name: `mix` → `johns-mix`
+- Using a subdomain: `sptfy.in/mix` → `playlist.sptfy.in/mix`
+
+### Input border stays yellow
+
+The system is checking availability. This usually takes less than 1 second. If it stays yellow:
+- Check your internet connection
+- Wait a moment and try typing again
+- Refresh the page if needed
+
+### Button is disabled
+
+The "Short It!" button is disabled when:
+- ⏳ Slug is still being checked (yellow border)
+- ❌ Slug is taken or invalid (red border)
+- ⚠️ Slug is too short (< 4 characters)
+- 🔒 Maintenance mode is active
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Creating Links" icon="scissors" href="/guides/creating-links">
+    Learn the basics of link creation
+  </Card>
+  <Card title="Managing Links" icon="table" href="/guides/managing-links">
+    View and edit your custom slugs in the dashboard
+  </Card>
+</CardGroup>

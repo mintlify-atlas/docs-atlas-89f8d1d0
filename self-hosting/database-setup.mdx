@@ -1,0 +1,416 @@
+---
+title: 'Database Setup'
+description: 'Configure PocketBase database collections and schema for sptfy.in'
+---
+
+## Overview
+
+Sptfy.in uses **PocketBase** as its backend database. PocketBase is a self-hosted SQLite database with a built-in admin UI and REST API.
+
+This guide covers:
+- Creating the admin account
+- Importing the database schema
+- Understanding the collections structure
+- Running migrations
+
+## Initial Setup
+
+### Create Admin Account
+
+After starting PocketBase for the first time, create an admin account:
+
+<Steps>
+  <Step title="Access the admin panel">
+    Open your browser and navigate to:
+    
+    **Local development**:
+    ```
+    http://127.0.0.1:8090/_/
+    ```
+    
+    **Production** (after setting up Nginx reverse proxy):
+    ```
+    https://pbbase.yourdomain.com/_/
+    ```
+    
+    <Note>
+    If running in Docker on a VPS, you may need to SSH tunnel to access the admin panel:
+    ```bash
+    ssh -L 8090:localhost:8091 user@your-vps
+    ```
+    Then open `http://localhost:8090/_/` in your browser.
+    </Note>
+  </Step>
+
+  <Step title="Create admin credentials">
+    On first access, you'll see a setup screen:
+    
+    - **Email**: admin@yourdomain.com (use a real email)
+    - **Password**: Choose a strong password (16+ characters, use a password manager)
+    - **Confirm Password**: Re-enter your password
+    
+    Click **Create and Login**.
+    
+    <Warning>
+    Store these credentials securely. You cannot recover them if lost. If you lose access, you'll need to delete `pb_data/` and start over.
+    </Warning>
+  </Step>
+</Steps>
+
+## Import Database Schema
+
+The repository includes migration files that define the database schema. You have two options:
+
+### Option 1: Automatic Migration (Recommended)
+
+Migrations in `pocketbase/pb_migrations/` run automatically when the container starts.
+
+```bash
+# Start the container (migrations run automatically)
+cd ~/pb-docker
+docker compose up -d
+
+# Check logs to verify migrations ran
+docker compose logs pocketbase | grep migration
+```
+
+You should see output like:
+```
+> applying migration 1738081665_created_analytic.js
+> applying migration 1738156111_created_viewList.js
+```
+
+<Note>
+If you see errors about duplicate collections, migrations may have already run. This is normal on restarts.
+</Note>
+
+### Option 2: Manual Schema Import
+
+If you need to manually import the schema (e.g., from production to local dev):
+
+<Steps>
+  <Step title="Export schema from production">
+    1. Log in to production PocketBase admin: `https://pbbase.sptfy.in/_/`
+    2. Go to **Settings** → **Export collections**
+    3. Download the JSON file (e.g., `pb_schema_export.json`)
+  </Step>
+
+  <Step title="Import schema to your instance">
+    1. Log in to your PocketBase admin panel
+    2. Go to **Settings** → **Import collections**
+    3. Upload the JSON file from step 1
+    4. Click **Import**
+    
+    <Warning>
+    Importing overwrites existing collections. Back up your data first if you have existing records.
+    </Warning>
+  </Step>
+</Steps>
+
+## Database Structure
+
+### Collections Overview
+
+Sptfy.in uses the following collections:
+
+<AccordionGroup>
+  <Accordion title="users - User accounts">
+    Stores user authentication and profile data.
+    
+    **Key fields**:
+    - `id` (text) - Unique user ID
+    - `email` (email) - User email
+    - `emailVisibility` (bool) - Whether email is public
+    - `verified` (bool) - Email verification status
+    - `name` (text) - Display name
+    - `avatar` (file) - Profile picture
+    
+    **Auth providers**:
+    - Spotify OAuth (primary authentication method)
+    
+    **API Rules**:
+    - List: `@request.auth.id != ""` (authenticated users only)
+    - View: `@request.auth.id != ""` (authenticated users only)
+    - Create: Public (via Spotify OAuth)
+    - Update: `@request.auth.id = id` (users can update their own profile)
+    - Delete: Admin only
+  </Accordion>
+
+  <Accordion title="random_short - Short links">
+    Stores all shortened Spotify links (both random and custom slugs).
+    
+    **Key fields**:
+    - `id` (text) - Unique link ID
+    - `slug` (text) - Short URL slug (e.g., "abc123" or "my-playlist")
+    - `destination` (url) - Original Spotify URL
+    - `user` (relation) - User who created the link (optional, for authenticated users)
+    - `created` (date) - Timestamp of creation
+    - `clicks` (number) - Total click count
+    - `last_clicked` (date) - Last click timestamp
+    
+    **Indexes**:
+    - Unique index on `slug` (prevents duplicate slugs)
+    
+    **API Rules**:
+    - List: `@request.auth.id != "" && user = @request.auth.id` (users see their own links)
+    - View: Public (anyone can view link details)
+    - Create: Public with Turnstile validation
+    - Update: `@request.auth.id = user` (owner can update)
+    - Delete: `@request.auth.id = user` (owner can delete)
+  </Accordion>
+
+  <Accordion title="analytics - Click tracking">
+    Tracks individual clicks on short links for analytics.
+    
+    **Key fields**:
+    - `id` (text) - Unique analytics record ID
+    - `link` (relation) - Related short link
+    - `timestamp` (date) - Click timestamp
+    - `ip` (text) - IP address (hashed for privacy)
+    - `user_agent` (text) - Browser user agent
+    - `referrer` (url) - Referrer URL
+    - `country_code` (text) - 2-letter country code (from IP geolocation)
+    
+    **Privacy**:
+    - IP addresses are hashed before storage
+    - Country code determined via ip-api.com (see `pb_hooks/random.pb.js`)
+    
+    **API Rules**:
+    - List: `@request.auth.id != "" && link.user = @request.auth.id` (owner sees analytics)
+    - View: `@request.auth.id != "" && link.user = @request.auth.id`
+    - Create: Internal only (via hooks)
+    - Update: Admin only
+    - Delete: Admin only
+  </Accordion>
+
+  <Accordion title="blocks - Blocked users/IPs">
+    Stores blocked users or IP addresses to prevent abuse.
+    
+    **Key fields**:
+    - `id` (text) - Unique block ID
+    - `type` (select) - Block type: `user` or `ip`
+    - `value` (text) - User ID or IP address
+    - `reason` (text) - Block reason
+    - `created` (date) - Block timestamp
+    - `expires` (date) - Expiration date (optional)
+    
+    **API Rules**:
+    - List: Admin only
+    - View: Admin only
+    - Create: Admin only
+    - Update: Admin only
+    - Delete: Admin only
+  </Accordion>
+
+  <Accordion title="viewList - View analytics aggregation">
+    View collection that aggregates analytics data for dashboard display.
+    
+    **Purpose**: Pre-computed analytics summaries to improve dashboard performance.
+    
+    **Fields**: Aggregates clicks by time period, country, referrer, etc.
+    
+    **API Rules**:
+    - List: `@request.auth.id != ""` (authenticated users only)
+    - View: `@request.auth.id != ""`
+    - Create/Update/Delete: Not applicable (view-only)
+  </Accordion>
+</AccordionGroup>
+
+## PocketBase Hooks
+
+Hooks are custom JavaScript functions that run on specific events (e.g., record creation).
+
+Location: `pocketbase/pb_hooks/`
+
+### Available Hooks
+
+<CodeGroup>
+```javascript pb_hooks/random.pb.js
+/// <reference path="../pb_data/types.d.ts" />
+
+// IP geolocation hook for analytics
+onRecordCreateRequest((e) => {
+    const requestIp = e.realIP();
+    const res = $http.send({
+        url: 'http://ip-api.com/json/' + requestIp + '?fields=countryCode',
+        headers: { 'content-type': 'application/json' }
+    });
+
+    const response = res.json;
+    const countryCode = response.countryCode;
+    $app.logger().info('Country Code detected', 'countryCode', countryCode);
+    
+    e.next();
+}, 'analytics');
+```
+
+```javascript pb_hooks/main.pb.js
+// Example custom API route
+routerAdd('GET', '/hello/{name}', (e) => {
+    let name = e.request.pathValue('name');
+    console.log('Hello routerAdd is loaded');
+
+    return e.json(200, { message: 'Hello ' + name });
+});
+```
+</CodeGroup>
+
+<Note>
+Hooks are loaded automatically when PocketBase starts. Changes to hook files require a container restart:
+```bash
+docker compose restart
+```
+</Note>
+
+## Migrations
+
+Migrations define schema changes over time. They're stored in `pocketbase/pb_migrations/`.
+
+### How Migrations Work
+
+1. Each migration is a JavaScript file with a timestamp name:
+   ```
+   1738081665_created_analytic.js
+   1738156111_created_viewList.js
+   ```
+
+2. PocketBase tracks which migrations have run in `pb_data/data.db`
+
+3. On startup, PocketBase runs any new migrations in order
+
+### Creating New Migrations
+
+Don't manually create migration files. Instead:
+
+1. Make schema changes in the PocketBase admin UI
+2. PocketBase automatically generates migration files
+3. Commit the new migration files to git
+4. Deploy (GitHub Actions will pull the new migrations)
+
+<Warning>
+**Version Compatibility**: The production instance uses PocketBase v0.23.12. Migrations from v0.22 and earlier use a different API (`Dao`) and won't work. Always export/import schema from the running v0.23+ instance.
+</Warning>
+
+## Local Development Setup
+
+For local development, you need to run PocketBase locally:
+
+### Windows
+
+```bash
+cd pocketbase
+start-dev.bat
+```
+
+This script:
+- Sets `CF_SECRET_KEY` to the Turnstile test key (always passes)
+- Starts PocketBase on `http://127.0.0.1:8090`
+
+### Linux/macOS
+
+```bash
+cd pocketbase
+CF_SECRET_KEY=1x0000000000000000000000000000000AA ./pocketbase serve
+```
+
+### Connecting Frontend to Local Backend
+
+Update your frontend `.env` file:
+
+```bash
+PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
+PUBLIC_TURNSTILE_SITE_KEY=1x0000000000000000000000000000000AA
+```
+
+Then start the dev server:
+```bash
+pnpm dev
+```
+
+<Note>
+The test Turnstile site key `1x0000000000000000000000000000000AA` always passes validation. Perfect for local development.
+</Note>
+
+## Database Backups
+
+### Automated Backups (Production)
+
+Production uses PocketBase's built-in S3 backup to Cloudflare R2.
+
+**Configure in PocketBase Admin**:
+1. Settings → Backups
+2. Enable S3 backups
+3. Set schedule (e.g., daily at 3 AM)
+
+### Manual Backups
+
+```bash
+# Stop the container
+cd ~/pb-docker
+docker compose down
+
+# Backup pb_data directory
+tar -czf pb_data_backup_$(date +%Y%m%d).tar.gz pb_data/
+
+# Copy to safe location
+scp pb_data_backup_*.tar.gz user@backup-server:/backups/
+
+# Restart container
+docker compose up -d
+```
+
+### Restore from Backup
+
+```bash
+# Stop the container
+docker compose down
+
+# Remove current data
+mv pb_data pb_data.old
+
+# Extract backup
+tar -xzf pb_data_backup_20260302.tar.gz
+
+# Restart container
+docker compose up -d
+```
+
+## Troubleshooting
+
+### Migrations fail to run
+
+**Error**: `migration already applied`
+
+**Solution**: This is normal on restarts. PocketBase tracks applied migrations and skips them.
+
+### Cannot access admin panel
+
+**Error**: Connection refused at `http://localhost:8090`
+
+**Solution**: Check if PocketBase is running:
+```bash
+docker compose ps
+curl http://localhost:8091/api/health
+```
+
+### "Collection not found" errors
+
+**Cause**: Migrations haven't run or schema import failed.
+
+**Solution**: Check logs for migration errors:
+```bash
+docker compose logs pocketbase | grep -i error
+```
+
+If migrations failed, try manual schema import (see above).
+
+### Database locked errors
+
+**Cause**: SQLite can have lock contention under high load.
+
+**Solution**: Increase VPS resources or optimize queries. For very high traffic, consider migrating to PostgreSQL (requires forking PocketBase or using a different backend).
+
+## Next Steps
+
+- [Configuration](/self-hosting/configuration) - Set up environment variables and settings
+- [Deployment](/self-hosting/deployment) - Deploy to production with Nginx and Cloudflare Pages
