@@ -1,0 +1,82 @@
+{
+  "projectType": "saas",
+  "projectName": "sptfy.in",
+  "projectDescription": "A simple, self-hosted Spotify link shortener with analytics and custom slugs",
+  "theme": "almond",
+  "primaryColor": "#1DB954",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Using sptfy.in",
+            "pages": [
+              "guides/creating-links",
+              "guides/custom-slugs",
+              "guides/managing-links",
+              "guides/analytics"
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "self-hosting/installation",
+              "self-hosting/configuration",
+              "self-hosting/database-setup",
+              "self-hosting/deployment"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API",
+            "pages": [
+              "api/authentication",
+              "api/links",
+              "api/analytics"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/local-setup",
+              "development/tech-stack",
+              "development/contributing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Spotify-exclusive link shortening",
+    "Custom slug support",
+    "Click analytics and tracking",
+    "User authentication and dashboard",
+    "Self-hosted with PocketBase backend",
+    "Bot detection and filtering"
+  ],
+  "publicApiSurface": [
+    "POST /api/links - Create shortened link",
+    "GET /api/links - Get user's links",
+    "PUT /api/links/:id - Update link",
+    "DELETE /api/links/:id - Delete link",
+    "GET /api/analytics - Get link analytics",
+    "GET /:slug - Redirect to Spotify URL"
+  ]
+}
